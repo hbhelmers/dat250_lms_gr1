@@ -11,7 +11,9 @@ export type CreateCourseInput = {
   semester: string
 }
 
-export type Session = { username: string }
+export type Session = { id: number; name: string; email: string }
+
+export type RegistrationInput = { name: string; email: string; password: string }
 
 export class ApiError extends Error {
   readonly status: number
@@ -64,11 +66,19 @@ export function getCourses(signal?: AbortSignal) {
   return request<StoredCourse[]>('/api/courses', { signal })
 }
 
-export async function login(username: string, password: string) {
+export async function register(input: RegistrationInput) {
+  return request<Session>('/api/register', {
+    method: 'POST',
+    headers: { ...await csrfHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export async function login(email: string, password: string) {
   await request<void>('/api/login', {
     method: 'POST',
     headers: { ...await csrfHeaders(), 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ username: username.trim(), password }),
+    body: new URLSearchParams({ username: email.trim(), password }),
   })
   return getSession()
 }

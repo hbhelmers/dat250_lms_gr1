@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import no.uib.dat250.LMS.user.EmailAlreadyRegisteredException;
+
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
@@ -25,7 +27,14 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(ResponseStatusException.class)
-    public ProblemDetail missingResource(ResponseStatusException exception) {
+    public ProblemDetail statusError(ResponseStatusException exception) {
         return ProblemDetail.forStatusAndDetail(exception.getStatusCode(), exception.getReason());
+    }
+
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ProblemDetail duplicateEmail(EmailAlreadyRegisteredException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problem.setProperty("fieldErrors", Map.of("email", exception.getMessage()));
+        return problem;
     }
 }

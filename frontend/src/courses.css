@@ -1,7 +1,7 @@
 .live-workspace .main-content { min-height: calc(100vh - 80px); display: flex; flex-direction: column; }
 .live-workspace .page-footer { margin-top: auto; padding-top: 24px; }
 .live-workspace .nav-item { text-decoration: none; }
-.live-workspace .sidebar-profile strong { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.live-workspace .sidebar-profile strong { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .live-workspace .page-heading { margin-bottom: 35px; }
 .live-workspace .page-heading > .primary-button { margin-top: 23px; flex-shrink: 0; }
 .logout-button { white-space: nowrap; }
@@ -9,6 +9,10 @@
 .loading-dot { width: 7px; height: 7px; border-radius: 50%; background: #9caf8c; animation: loading-pulse 1s ease-in-out infinite alternate; }
 @keyframes loading-pulse { from { opacity: .3; } to { opacity: 1; } }
 .login-panel { width: min(440px, 100%); margin: 18px auto 65px; border: 1px solid var(--border); border-radius: 13px; padding: 35px; background: #fff; box-shadow: 0 12px 40px #29352f04; }
+.auth-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 28px; border-radius: 8px; background: #f2f5ee; }
+.auth-mode-switch button { padding: 10px 8px; border: 0; border-radius: 5px; background: transparent; color: #798d68; font-size: 12px; }
+.auth-mode-switch button[aria-pressed="true"] { background: #fff; color: #425b32; box-shadow: 0 1px 4px #29352f0c; }
+.auth-mode-switch button:disabled { opacity: .6; cursor: default; }
 .login-symbol { background: #eaf0e4; color: #8ca177; width: 48px; height: 48px; border-radius: 13px; display: grid; place-items: center; margin-bottom: 22px; }
 .login-symbol .icon { width: 25px; height: 25px; }
 .login-panel h2 { font-size: 25px; font-weight: 600; letter-spacing: -.8px; }
@@ -22,6 +26,7 @@
 .form-field [aria-invalid="true"] { border-color: #d58f74; }
 .form-field input:disabled, .form-field textarea:disabled { opacity: .65; }
 .field-error { color: #a14c2c; font-size: 11px; line-height: 1.7; }
+.field-hint { color: #839573; font-size: 11px; line-height: 1.7; }
 .api-feedback { display: flex; align-items: flex-start; gap: 8px; border-radius: 7px; padding: 13px 16px; font-size: 12px; line-height: 1.7; margin-bottom: 20px; }
 .api-feedback.error { color: #a14c2c; background: #f9eee7; border: 1px solid #f0dbcd; }
 .api-feedback.success { color: #59793f; background: #edf4e4; border: 1px solid #dce8cf; }

@@ -14,6 +14,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import no.uib.dat250.LMS.course.CourseRepository;
+import no.uib.dat250.LMS.user.LmsUserRepository;
+import no.uib.dat250.LMS.user.RegistrationRequest;
+import no.uib.dat250.LMS.user.RegistrationService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -26,9 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "spring.config.import=",
-        "POSTGRES_PASSWORD=test-password",
-        "LMS_USERNAME=test-teacher",
-        "LMS_PASSWORD=test-login-password"
+        "POSTGRES_PASSWORD=test-password"
 })
 @AutoConfigureMockMvc
 @Import(TestDatabaseConfiguration.class)
@@ -44,9 +45,16 @@ class LmsApplicationTests {
     @Autowired
     private CourseRepository repository;
 
+    @Autowired
+    private LmsUserRepository users;
+
+    @Autowired
+    private RegistrationService registration;
+
     @BeforeEach
     void clearTestDatabase() {
         repository.deleteAll();
+        users.deleteAll();
     }
 
     @Test
@@ -136,13 +144,18 @@ class LmsApplicationTests {
 
     @Test
     void browserCanLogInAndUseItsSession() throws Exception {
+        var user = registration.register(new RegistrationRequest(
+                "Testlærer", "teacher@example.test", "test-login-password"));
         var result = mvc.perform(formLogin("/api/login")
-                        .user("test-teacher").password("test-login-password"))
+                        .user("teacher@example.test").password("test-login-password"))
                 .andExpect(status().isNoContent()).andReturn();
         var session = (MockHttpSession) result.getRequest().getSession(false);
 
         mvc.perform(get("/api/session").session(session))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.username").value("test-teacher"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(user.id()))
+                .andExpect(jsonPath("$.name").value("Testlærer"))
+                .andExpect(jsonPath("$.email").value("teacher@example.test"))
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
         mvc.perform(post("/api/logout").session(session).with(csrf()))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/session")).andExpect(status().isUnauthorized());
@@ -150,13 +163,14 @@ class LmsApplicationTests {
 
     @Test
     void incorrectPasswordIsRejected() throws Exception {
-        mvc.perform(formLogin("/api/login").user("test-teacher").password("incorrect"))
+        registration.register(new RegistrationRequest("Testlærer", "teacher@example.test", "test-login-password"));
+        mvc.perform(formLogin("/api/login").user("teacher@example.test").password("incorrect"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void loginRequiresCsrfProtection() throws Exception {
-        mvc.perform(post("/api/login").param("username", "test-teacher")
+        mvc.perform(post("/api/login").param("username", "teacher@example.test")
                         .param("password", "test-login-password"))
                 .andExpect(status().isForbidden());
     }

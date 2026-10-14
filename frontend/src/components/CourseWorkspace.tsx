@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, getCourses, getSession, login, logout } from '../api'
+import { ApiError, getCourses, getSession, logout } from '../api'
 import type { Session, StoredCourse } from '../api'
 import { CreateCourseDialog } from './CreateCourseDialog'
 import { Icon } from './Icon'
+import { AuthPanel } from './AuthPanel'
 
 function CourseDetails({ course, onClose }: { course: StoredCourse; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -34,9 +35,6 @@ export function CourseWorkspace({ onOpenDemo }: { onOpenDemo: () => void }) {
   const [refreshing, setRefreshing] = useState(false)
   const [query, setQuery] = useState('')
   const [semesterFilter, setSemesterFilter] = useState('')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [loggingIn, setLoggingIn] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -107,7 +105,7 @@ export function CourseWorkspace({ onOpenDemo }: { onOpenDemo: () => void }) {
         </nav>
         <div className="sidebar-bottom">
           <div className="semester-note"><Icon name="sprout" /><strong>Små steg.<br />Stor fremgang.</strong><p>Et godt emne starter<br />med en god idé.</p><span>ET STED FOR LÆRING</span></div>
-          <div className="sidebar-profile"><span className="user-avatar">{session?.username.charAt(0).toLocaleUpperCase('nb') || 'L'}</span><div><strong>{session?.username || 'Velkommen'}</strong><span>{session ? 'Innlogget' : 'Ditt læringsrom venter'}</span></div>{session && <span className="online-indicator" />}</div>
+          <div className="sidebar-profile"><span className="user-avatar">{session?.name.charAt(0).toLocaleUpperCase('nb') || 'L'}</span><div><strong title={session?.email}>{session?.name || 'Velkommen'}</strong><span>{session ? 'Innlogget' : 'Ditt læringsrom venter'}</span></div>{session && <span className="online-indicator" />}</div>
         </div>
       </aside>
 
@@ -143,33 +141,13 @@ export function CourseWorkspace({ onOpenDemo }: { onOpenDemo: () => void }) {
           </div>
 
           {initialLoading ? <div className="workspace-loading" role="status"><span className="loading-dot" />Henter læringsrommet ditt …</div> : !session ? (
-            <section className="login-panel" aria-labelledby="login-heading">
-              <span className="login-symbol"><Icon name="book" /></span><h2 id="login-heading">Velkommen tilbake.</h2><p>Emnene dine venter på deg.</p>
-              <form onSubmit={async (event) => {
-                event.preventDefault()
-                if (loggingIn) return
-                setLoggingIn(true)
-                setError('')
-                try {
-                  const current = await login(username, password)
-                  setPassword('')
-                  setSession(current)
-                  setQuery('')
-                  setSemesterFilter('')
-                  await refreshCourses()
-                } catch (failure) {
-                  setError(failure instanceof ApiError && failure.status === 401
-                    ? 'Feil brukernavn eller passord. Prøv igjen.'
-                    : failure instanceof Error ? failure.message : 'Kunne ikke logge inn.')
-                } finally { setLoggingIn(false) }
-              }}>
-                <div className="form-field"><label htmlFor="login-username">Brukernavn</label><input id="login-username" name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required disabled={loggingIn} /></div>
-                <div className="form-field"><label htmlFor="login-password">Passord</label><input id="login-password" name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required disabled={loggingIn} /></div>
-                {error && <p className="api-feedback error" role="alert">{error}</p>}
-                <button className="primary-button" type="submit" disabled={loggingIn}>{loggingIn ? 'Logger inn …' : 'Logg inn'}<Icon name="arrow" /></button>
-              </form>
-              <div className="login-demo-link"><span>Bare nysgjerrig?</span><button className="text-button" onClick={onOpenDemo}>Utforsk frontend-demoen <Icon name="arrow" /></button></div>
-            </section>
+            <AuthPanel error={error} onClearError={() => setError('')} onOpenDemo={onOpenDemo}
+              onLoggedIn={async (current) => {
+                setSession(current)
+                setQuery('')
+                setSemesterFilter('')
+                await refreshCourses()
+              }} />
           ) : (
             <>
               {error && <p className="api-feedback error" role="alert">{error}</p>}
