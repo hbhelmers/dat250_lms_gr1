@@ -1,0 +1,89 @@
+import { useEffect, useRef, useState } from 'react'
+import { ApiError, createCourse } from '../api'
+import type { StoredCourse } from '../api'
+import { Icon } from './Icon'
+
+export function CreateCourseDialog({ onClose, onSaved, onSessionExpired }: {
+  onClose: () => void
+  onSaved: (course: StoredCourse) => void
+  onSessionExpired: () => void
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [semester, setSemester] = useState(() => {
+    const today = new Date()
+    return `${today.getMonth() >= 6 ? 'Høst' : 'Vår'} ${today.getFullYear()}`
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!dialogRef.current?.open) dialogRef.current?.showModal()
+  }, [])
+
+  return (
+    <dialog ref={dialogRef} className="create-course-dialog" aria-labelledby="create-course-heading"
+      onClose={onClose} onCancel={(event) => { if (saving) event.preventDefault() }}>
+      <div className="dialog-header">
+        <div><span className="eyebrow">PLASS TIL NYE IDEER</span><h2 id="create-course-heading">Opprett et emne</h2></div>
+        <button type="button" className="icon-button" aria-label="Lukk skjemaet" disabled={saving}
+          onClick={() => dialogRef.current?.close()}><Icon name="close" /></button>
+      </div>
+      <form className="course-form" onSubmit={async (event) => {
+        event.preventDefault()
+        if (saving) return
+        setSaving(true)
+        setError('')
+        setFieldErrors({})
+        try {
+          onSaved(await createCourse({ title, description, semester }))
+        } catch (failure) {
+          if (failure instanceof ApiError) {
+            if (failure.status === 401) { onSessionExpired(); return }
+            setFieldErrors(failure.fieldErrors)
+          }
+          setError(failure instanceof Error ? failure.message : 'Kunne ikke lagre emnet.')
+        } finally {
+          setSaving(false)
+        }
+      }}>
+        <p className="form-intro">Gi emnet en tittel, velg semester og skriv hva det handler om.</p>
+        <div className="form-field">
+          <label htmlFor="course-title">Tittel</label>
+          <input id="course-title" name="title" placeholder="F.eks. DAT250 – Programvareteknologi"
+            value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={255}
+            disabled={saving} autoFocus aria-invalid={Boolean(fieldErrors.title)}
+            aria-describedby={fieldErrors.title ? 'course-title-error' : undefined} />
+          {fieldErrors.title && <p className="field-error" id="course-title-error">{fieldErrors.title}</p>}
+        </div>
+        <div className="form-field">
+          <label htmlFor="course-semester">Semester</label>
+          <input id="course-semester" name="semester" placeholder="F.eks. Høst 2026"
+            value={semester} onChange={(event) => setSemester(event.target.value)} required maxLength={50}
+            disabled={saving} aria-invalid={Boolean(fieldErrors.semester)}
+            aria-describedby={fieldErrors.semester ? 'course-semester-error' : undefined} />
+          {fieldErrors.semester && <p className="field-error" id="course-semester-error">{fieldErrors.semester}</p>}
+        </div>
+        <div className="form-field">
+          <label htmlFor="course-description">Beskrivelse</label>
+          <textarea id="course-description" name="description" rows={5}
+            placeholder="Hva skal studentene lære i dette emnet?" value={description}
+            onChange={(event) => setDescription(event.target.value)} required maxLength={10000}
+            disabled={saving} aria-invalid={Boolean(fieldErrors.description)}
+            aria-describedby={fieldErrors.description ? 'course-description-error' : undefined} />
+          {fieldErrors.description && <p className="field-error" id="course-description-error">{fieldErrors.description}</p>}
+        </div>
+        {error && <p className="api-feedback error" role="alert">{error}</p>}
+        <div className="form-actions">
+          <button type="button" className="secondary-button" disabled={saving}
+            onClick={() => dialogRef.current?.close()}>Avbryt</button>
+          <button type="submit" className="primary-button" disabled={saving}>
+            {saving ? 'Lagrer …' : 'Opprett emne'}<Icon name="arrow" />
+          </button>
+        </div>
+      </form>
+    </dialog>
+  )
+}

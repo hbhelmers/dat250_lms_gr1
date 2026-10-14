@@ -17,7 +17,7 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 360px; }
-button, input { font: inherit; }
+button, input, textarea, select { font: inherit; }
 button, a, input { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; color: inherit; border: 0; }
 button:disabled { cursor: default; }
