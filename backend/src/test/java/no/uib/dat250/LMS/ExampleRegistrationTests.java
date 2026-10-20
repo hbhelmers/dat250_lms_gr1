@@ -41,6 +41,7 @@ class ExampleRegistrationTests {
     @Autowired private CourseModuleRepository modules;
     @Autowired private QuizRepository quizRepository;
     @Autowired private QuizService quizzes;
+    @Autowired private AssignmentService assignments;
     @Autowired private QuizAttemptRepository attempts;
     @Autowired private ExampleSetupService examples;
 
@@ -58,10 +59,10 @@ class ExampleRegistrationTests {
     }
 
     @Test
-    void teacherTemplateContainsEditableModulesPagesDraftsAndQuizzes() throws Exception {
+    void teacherTemplateContainsEditableModulesPagesDraftsQuizzesAndAssignments() throws Exception {
         register(EMAIL, "TEACHER", true);
         assertThat(courses.count()).isEqualTo(2); assertThat(modules.count()).isEqualTo(4);
-        assertThat(items.count()).isEqualTo(8); assertThat(quizRepository.count()).isEqualTo(2);
+        assertThat(items.count()).isEqualTo(10); assertThat(quizRepository.count()).isEqualTo(2);
         var sampleCourses = courseService.findAll(EMAIL);
         assertThat(sampleCourses).extracting(CourseResponse::role).containsOnly(CourseRole.TEACHER);
         for (var course : sampleCourses) {
@@ -71,6 +72,10 @@ class ExampleRegistrationTests {
             var quiz = quizzes.read(course.id(), groups.getFirst().id(), quizItem.id(), EMAIL);
             assertThat(quiz.questions()).hasSize(2);
             assertThat(quiz.questions().getFirst().correctOption()).isZero();
+            var assignmentItem = groups.getLast().items().stream().filter(item -> item.type() == ContentType.ASSIGNMENT).findFirst().orElseThrow();
+            var assignment = assignments.read(course.id(), groups.getLast().id(), assignmentItem.id(), EMAIL);
+            assertThat(assignment.content().published()).isTrue();
+            assertThat(assignment.submissions()).isEmpty();
             courseService.update(course.id(), new CreateCourseRequest("Mitt fag", "Egen beskrivelse", "Høst 2026"), EMAIL);
         }
     }
@@ -154,7 +159,7 @@ class ExampleRegistrationTests {
                 .andExpect(status().isConflict());
         assertThat(courses.count()).isEqualTo(2); assertThat(users.count()).isEqualTo(1);
         examples.addExamples(users.findByEmail(EMAIL).orElseThrow());
-        assertThat(courses.count()).isEqualTo(2); assertThat(items.count()).isEqualTo(8);
+        assertThat(courses.count()).isEqualTo(2); assertThat(items.count()).isEqualTo(10);
     }
 
     @Test

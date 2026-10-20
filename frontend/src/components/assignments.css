@@ -1,0 +1,18 @@
+.assignment-upload { margin-top: 28px; padding: 22px; border: 1px solid #dedfd7; border-radius: 14px; background: #f8f9f4; }
+.assignment-upload h4, .assignment-history h4 { margin: 0 0 18px; font-size: 17px; }
+.assignment-upload input[type="file"] { max-width: 100%; padding: 12px; background: white; border: 1px solid #d8ddd1; border-radius: 8px; }
+.assignment-upload input::file-selector-button { margin-right: 12px; padding: 8px 12px; border: 0; border-radius: 6px; background: #e9eee0; color: #35442b; cursor: pointer; }
+.assignment-history { margin-top: 30px; }
+.submission-count { display: inline-block; padding: 3px 9px; margin-left: 5px; border-radius: 20px; background: #eef0e7; font-size: 12px; }
+.submission-card { margin: 14px 0; padding: 20px; border: 1px solid #e0e3d9; border-radius: 12px; background: white; }
+.submission-heading { display: flex; gap: 14px; justify-content: space-between; align-items: flex-start; }
+.submission-heading small { display: block; color: #727768; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.assessment-badge { flex-shrink: 0; border-radius: 8px; padding: 7px 10px; font-size: 12px; background: #f2f0e8; color: #75683a; }
+.assessment-badge.published { background: #e6f0df; color: #385b2d; font-weight: 700; }
+.submission-download { display: inline-block; margin: 16px 0; color: #526b3c; font-size: 14px; text-underline-offset: 4px; overflow-wrap: anywhere; }
+.late-submission { margin: 10px 0 0; color: #966127; font-size: 12px; font-weight: 600; }
+.assessment-feedback { border-left: 3px solid #9caf7c; background: #f7f9f2; padding: 14px 16px; font-size: 14px; }
+.assessment-feedback p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; margin-bottom: 0; }
+.assessment-editor { margin-top: 18px; border-top: 1px solid #e1e5d8; padding-top: 20px; }
+.assessment-editor select { padding: 10px; border: 1px solid #d8ddd1; border-radius: 7px; background: white; font: inherit; }
+@media (max-width: 600px) { .submission-heading { flex-direction: column; } .submission-card, .assignment-upload { padding: 16px; } }

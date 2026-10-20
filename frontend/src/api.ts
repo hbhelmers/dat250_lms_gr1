@@ -11,7 +11,7 @@ export type StoredCourse = {
 export type CourseMember = { userId: number; name: string; email: string; role: CourseRole }
 
 export type LearningItem = {
-  id: number; moduleId: number; type: 'PAGE' | 'QUIZ'; title: string; body: string; position: number
+  id: number; moduleId: number; type: 'PAGE' | 'QUIZ' | 'ASSIGNMENT'; title: string; body: string; position: number
   published: boolean; visibleFrom: string | null; visibleUntil: string | null
 }
 export type LearningModule = { id: number; title: string; position: number; items: LearningItem[] }
@@ -24,6 +24,16 @@ export type QuizAttempt = {
   answers: { questionId: number; selectedOption: number; correct: boolean; correctOption: number; hint: string }[]
 }
 export type Quiz = { content: LearningItem; maxAttempts: number; deadline: string | null; resultsVisible: boolean; questionsLocked: boolean; questions: QuizQuestion[]; attempts: QuizAttempt[] }
+
+export type AssignmentGrade = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'PASSED' | 'FAILED'
+export type GradeInput = { grade: AssignmentGrade; feedback: string; published: boolean }
+export type AssignmentInput = PageInput & { deadline: string | null; acceptLate: boolean }
+export type AssignmentSubmission = {
+  id: number; version: number; submittedAt: string; late: boolean; filename: string; fileSize: number
+  studentId: number | null; studentName: string | null; studentEmail: string | null
+  grade: AssignmentGrade | null; feedback: string | null; gradePublished: boolean; gradedAt: string | null
+}
+export type Assignment = { content: LearningItem; deadline: string | null; acceptLate: boolean; submissions: AssignmentSubmission[] }
 
 export type CreateCourseInput = {
   title: string
@@ -65,6 +75,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const problem = await response.json().catch(() => null)
     const message = response.status === 401 ? 'Logg inn for å fortsette.'
       : response.status === 403 ? problem?.detail ?? 'Handlingen kunne ikke bekreftes. Last siden på nytt og prøv igjen.'
+      : response.status === 503 ? problem?.detail ?? 'Tjenesten er utilgjengelig. Prøv igjen om litt.'
       : response.status >= 500 ? 'Serveren er utilgjengelig akkurat nå. Prøv igjen om litt.'
       : problem?.detail ?? 'Noe gikk galt. Prøv igjen.'
     throw new ApiError(response.status, message, problem?.fieldErrors ?? {})
@@ -154,6 +165,29 @@ export function getQuizResults(courseId: number, moduleId: number, quizId: numbe
 }
 export function deleteLearningItem(courseId: number, moduleId: number, itemId: number) {
   return contentWrite<void>(`/api/courses/${courseId}/modules/${moduleId}/items/${itemId}`, 'DELETE')
+}
+
+function assignmentPath(courseId: number, moduleId: number, assignmentId?: number) {
+  return `/api/courses/${courseId}/modules/${moduleId}/assignments${assignmentId === undefined ? '' : `/${assignmentId}`}`
+}
+export function getAssignment(courseId: number, moduleId: number, assignmentId: number, signal?: AbortSignal) {
+  return request<Assignment>(assignmentPath(courseId, moduleId, assignmentId), { signal })
+}
+export function saveAssignment(courseId: number, moduleId: number, input: AssignmentInput, assignmentId?: number) {
+  return contentWrite<Assignment>(assignmentPath(courseId, moduleId, assignmentId), assignmentId === undefined ? 'POST' : 'PUT', input)
+}
+export async function submitAssignment(courseId: number, moduleId: number, assignmentId: number, submissionId: string, file: File) {
+  const body = new FormData()
+  body.set('submissionId', submissionId); body.set('file', file)
+  return request<AssignmentSubmission>(`${assignmentPath(courseId, moduleId, assignmentId)}/submissions`, {
+    method: 'POST', headers: await csrfHeaders(), body,
+  })
+}
+export function gradeSubmission(courseId: number, moduleId: number, assignmentId: number, submissionId: number, input: GradeInput) {
+  return contentWrite<AssignmentSubmission>(`${assignmentPath(courseId, moduleId, assignmentId)}/submissions/${submissionId}/grade`, 'PUT', input)
+}
+export function submissionDownloadUrl(courseId: number, moduleId: number, assignmentId: number, submissionId: number) {
+  return `${assignmentPath(courseId, moduleId, assignmentId)}/submissions/${submissionId}/file`
 }
 
 export async function addStudent(id: number, email: string) {

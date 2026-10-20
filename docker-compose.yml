@@ -16,5 +16,19 @@ services:
 
     restart: unless-stopped
 
+  object-storage:
+    image: chrislusf/seaweedfs:4.48
+    command: mini -dir=/data -volume.max=10 -master.volumeSizeLimitMB=128 -master.telemetry=false -webdav=false -admin.ui=false -s3.port.iceberg=0 -s3.port.lance=0
+    environment:
+      AWS_ACCESS_KEY_ID: ${LMS_STORAGE_ACCESS_KEY:-lms-local-access}
+      AWS_SECRET_ACCESS_KEY: ${LMS_STORAGE_SECRET_KEY:-lms-local-secret}
+      S3_BUCKET: lms-submissions
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - object_data:/data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  object_data:

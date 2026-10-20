@@ -15,6 +15,11 @@ import no.uib.dat250.LMS.user.EmailAlreadyRegisteredException;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ProblemDetail fileTooLarge() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, "Filen kan være maksimalt 10 MB.");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail invalidInput(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();

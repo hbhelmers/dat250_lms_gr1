@@ -26,16 +26,17 @@ public class ExampleSetupService {
     private final CourseModuleRepository modules;
     private final ContentItemRepository items;
     private final QuizRepository quizzes;
+    private final AssignmentRepository assignments;
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final boolean enabled;
 
     public ExampleSetupService(LmsUserRepository users, PasswordEncoder encoder, CourseRepository courses,
             CourseEnrollmentRepository enrollments, CourseModuleRepository modules, ContentItemRepository items,
-            QuizRepository quizzes, JdbcTemplate jdbc, Clock clock,
+            QuizRepository quizzes, AssignmentRepository assignments, JdbcTemplate jdbc, Clock clock,
             @Value("${lms.demo.accounts.enabled:false}") boolean enabled) {
         this.users = users; this.encoder = encoder; this.courses = courses; this.enrollments = enrollments;
-        this.modules = modules; this.items = items; this.quizzes = quizzes; this.jdbc = jdbc; this.clock = clock; this.enabled = enabled;
+        this.modules = modules; this.items = items; this.quizzes = quizzes; this.assignments = assignments; this.jdbc = jdbc; this.clock = clock; this.enabled = enabled;
     }
 
     public void initializeDemoAccounts() {
@@ -105,6 +106,7 @@ public class ExampleSetupService {
             var second = modules.save(new CourseModule(course, "Uke 2 – Databaser", 1));
             page(second, "Entiteter og relasjoner", "## Fra Java til databasen\n\nEn entitet representerer noe vi vil lagre, for eksempel en bruker eller et emne.\n\nEn innmelding kobler **brukeren**, **emnet** og **rollen** sammen. Det gjør at samme person kan ha ulike roller i ulike emner.", 0, true);
             page(second, "Arbeidsnotater til læreren", "## Utkast\n\nDette er en side som bare læreren ser. Rediger den og publiser når innholdet er klart.", 1, false);
+            assignment(second, "Innlevering – modeller et læringssystem", "## Din første innlevering\n\nLag en enkel datamodell for brukere, emner og innmeldinger. Forklar relasjonene med egne ord.\n\nLever svaret som **PDF eller DOCX**. Læreren vurderer innleveringen og publiserer en tilbakemelding.", 2);
         }
         if (!existing.contains("DAT100")) {
             var course = exampleCourse(teacher, "DAT100 – Grunnleggende programmering", "Eksempelfag: bli kjent med variabler, datatyper, valg og løkker i Java.", semester, "DAT100");
@@ -115,6 +117,7 @@ public class ExampleSetupService {
                     new QuizQuestionRequest("Hvilke verdier kan en boolean ha?", List.of("Alle heltall", "true eller false"), 1, "En boolean representerer om noe er sant eller usant.")));
             var second = modules.save(new CourseModule(course, "Uke 2 – Valg og løkker", 1));
             page(second, "Gjenta med en løkke", "## La programmet gjenta arbeidet\n\nEn for-løkke kjører kode flere ganger.\n\n```java\nfor (int i = 0; i < 3; i++) {\n    System.out.println(i);\n}\n```\n\nEksempelet skriver ut 0, 1 og 2.", 0, true);
+            assignment(second, "Innlevering – variabler og løkker", "## Forklar en løkke\n\nSkriv et lite Java-program med en variabel og en løkke. Forklar hva programmet skriver ut.\n\nLever kode og forklaring i én **PDF eller DOCX**.", 1);
         }
     }
 
@@ -131,5 +134,10 @@ public class ExampleSetupService {
                 true, null, null, 3, null, true, questions);
         var item = items.save(new ContentItem(module, ContentType.QUIZ, request.content(), position));
         quizzes.save(new QuizDefinition(item, request));
+    }
+    private void assignment(CourseModule module, String title, String body, int position) {
+        var request = new AssignmentRequest(title, body, true, null, null, null, false);
+        var item = items.save(new ContentItem(module, ContentType.ASSIGNMENT, request.content(), position));
+        assignments.save(new AssignmentDefinition(item, request));
     }
 }
