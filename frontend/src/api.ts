@@ -10,6 +10,13 @@ export type StoredCourse = {
 
 export type CourseMember = { userId: number; name: string; email: string; role: CourseRole }
 
+export type LearningPage = {
+  id: number; moduleId: number; type: 'PAGE'; title: string; body: string; position: number
+  published: boolean; visibleFrom: string | null; visibleUntil: string | null
+}
+export type LearningModule = { id: number; title: string; position: number; items: LearningPage[] }
+export type PageInput = Pick<LearningPage, 'title' | 'body' | 'published' | 'visibleFrom' | 'visibleUntil'>
+
 export type CreateCourseInput = {
   title: string
   description: string
@@ -77,6 +84,44 @@ export function getCourse(id: number, signal?: AbortSignal) {
 
 export function getCourseMembers(id: number, signal?: AbortSignal) {
   return request<CourseMember[]>(`/api/courses/${id}/members`, { signal })
+}
+
+export function getModules(courseId: number, signal?: AbortSignal) {
+  return request<LearningModule[]>(`/api/courses/${courseId}/modules`, { signal })
+}
+
+async function contentWrite<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', data?: unknown) {
+  return request<T>(path, {
+    method,
+    headers: { ...await csrfHeaders(), ...(data === undefined ? {} : { 'Content-Type': 'application/json' }) },
+    body: data === undefined ? undefined : JSON.stringify(data),
+  })
+}
+
+export function saveModule(courseId: number, title: string, moduleId?: number) {
+  return contentWrite<LearningModule>(`/api/courses/${courseId}/modules${moduleId === undefined ? '' : `/${moduleId}`}`,
+    moduleId === undefined ? 'POST' : 'PUT', { title })
+}
+
+export function deleteModule(courseId: number, moduleId: number) {
+  return contentWrite<void>(`/api/courses/${courseId}/modules/${moduleId}`, 'DELETE')
+}
+
+export function setModuleOrder(courseId: number, ids: number[]) {
+  return contentWrite<LearningModule[]>(`/api/courses/${courseId}/modules/order`, 'PUT', { ids })
+}
+
+export function saveLearningPage(courseId: number, moduleId: number, input: PageInput, pageId?: number) {
+  return contentWrite<LearningPage>(`/api/courses/${courseId}/modules/${moduleId}/pages${pageId === undefined ? '' : `/${pageId}`}`,
+    pageId === undefined ? 'POST' : 'PUT', input)
+}
+
+export function deleteLearningPage(courseId: number, moduleId: number, pageId: number) {
+  return contentWrite<void>(`/api/courses/${courseId}/modules/${moduleId}/pages/${pageId}`, 'DELETE')
+}
+
+export function setPageOrder(courseId: number, moduleId: number, ids: number[]) {
+  return contentWrite<LearningModule>(`/api/courses/${courseId}/modules/${moduleId}/pages/order`, 'PUT', { ids })
 }
 
 export async function addStudent(id: number, email: string) {

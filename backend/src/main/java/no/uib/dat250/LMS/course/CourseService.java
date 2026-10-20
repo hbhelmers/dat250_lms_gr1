@@ -16,11 +16,14 @@ public class CourseService {
     private final CourseRepository repository;
     private final CourseEnrollmentRepository enrollments;
     private final LmsUserRepository users;
+    private final CourseAccess access;
 
-    public CourseService(CourseRepository repository, CourseEnrollmentRepository enrollments, LmsUserRepository users) {
+    public CourseService(CourseRepository repository, CourseEnrollmentRepository enrollments,
+            LmsUserRepository users, CourseAccess access) {
         this.repository = repository;
         this.enrollments = enrollments;
         this.users = users;
+        this.access = access;
     }
 
     public List<CourseResponse> findAll(String email) {
@@ -29,7 +32,7 @@ public class CourseService {
     }
 
     public CourseResponse findById(Long id, String email) {
-        var membership = requireMembership(id, email);
+        var membership = access.requireMember(id, email);
         return CourseResponse.from(membership.getCourse(), membership.getRole());
     }
 
@@ -46,21 +49,19 @@ public class CourseService {
 
     @Transactional
     public CourseResponse update(Long id, CreateCourseRequest request, String email) {
-        var course = lockCourse(id);
-        requireTeacher(id, email);
+        var course = access.lockForTeacher(id, email);
         course.update(request.title().strip(), request.description().strip(), request.semester().strip());
         return CourseResponse.from(course, CourseRole.TEACHER);
     }
 
     public List<CourseMemberResponse> members(Long id, String email) {
-        requireTeacher(id, email);
+        access.requireTeacher(id, email);
         return enrollments.findMembers(id).stream().map(CourseMemberResponse::from).toList();
     }
 
     @Transactional
     public CourseMemberResponse addStudent(Long id, AddStudentRequest request, String email) {
-        var course = lockCourse(id);
-        requireTeacher(id, email);
+        var course = access.lockForTeacher(id, email);
         var student = users.findByEmail(request.email())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Fant ingen konto med denne e-postadressen. Studenten må registrere seg først."));
@@ -71,19 +72,4 @@ public class CourseService {
         return CourseMemberResponse.from(enrollment);
     }
 
-    private Course lockCourse(Long id) {
-        return repository.findForUpdate(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fant ikke emnet."));
-    }
-
-    private CourseEnrollment requireMembership(Long id, String email) {
-        return enrollments.findMembership(id, email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fant ikke emnet."));
-    }
-
-    private void requireTeacher(Long id, String email) {
-        if (requireMembership(id, email).getRole() != CourseRole.TEACHER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Du må være lærer i emnet for å gjøre dette.");
-        }
-    }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { addStudent, ApiError, getCourse, getCourseMembers } from '../api'
 import type { CourseMember, StoredCourse } from '../api'
 import { Icon } from './Icon'
+import { CourseContent } from './CourseContent'
 
 export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
   course: StoredCourse
@@ -15,11 +16,14 @@ export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [section, setSection] = useState<'content' | 'about' | 'members'>('content')
+  const [contentWorking, setContentWorking] = useState(false)
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const teacher = details.role === 'TEACHER'
+  const blocked = adding || contentWorking
 
   useEffect(() => {
     if (!dialogRef.current?.open) dialogRef.current?.showModal()
@@ -48,11 +52,11 @@ export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
 
   return (
     <dialog className="create-course-dialog course-details-dialog" ref={dialogRef}
-      onClose={onClose} onCancel={(event) => { if (adding) event.preventDefault() }}
+      onClose={onClose} onCancel={(event) => { if (blocked) event.preventDefault() }}
       aria-labelledby="course-details-heading">
       <div className="dialog-header">
         <div><span className="eyebrow">{details.semester}</span><h2 id="course-details-heading">{details.title}</h2></div>
-        <button className="icon-button" aria-label="Lukk emnet" disabled={adding}
+        <button className="icon-button" aria-label="Lukk emnet" disabled={blocked}
           onClick={() => dialogRef.current?.close()}><Icon name="close" /></button>
       </div>
       <div className="course-details-body">
@@ -60,12 +64,21 @@ export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
           {error && <p className="api-feedback error" role="alert">{error}</p>}
           {!loadFailed && <>
             <div className="course-access-heading">
-              <span className="content-type"><Icon name="book" />Om emnet</span>
+              <nav className="course-sections" aria-label="Emnevisning">
+                <button aria-pressed={section === 'content'} disabled={blocked} onClick={() => setSection('content')}>Innhold</button>
+                <button aria-pressed={section === 'about'} disabled={blocked} onClick={() => setSection('about')}>Om emnet</button>
+                {teacher && <button aria-pressed={section === 'members'} disabled={blocked} onClick={() => setSection('members')}>Deltakere</button>}
+              </nav>
               <span className={`course-role ${teacher ? 'teacher' : 'student'}`}>{teacher ? 'Lærer' : 'Student'}</span>
             </div>
-            <p className="stored-description">{details.description || 'Ingen beskrivelse lagt til.'}</p>
-            {teacher ? <>
-              <button className="secondary-button" disabled={adding} onClick={() => onEdit(details)}>Rediger emne</button>
+            {section === 'content' && <CourseContent courseId={details.id} teacher={teacher}
+              onSessionExpired={onSessionExpired} onWorkingChange={setContentWorking} />}
+            {section === 'about' && <>
+              <p className="stored-description">{details.description || 'Ingen beskrivelse lagt til.'}</p>
+              {teacher && <button className="secondary-button" onClick={() => onEdit(details)}>Rediger emne</button>}
+              {!teacher && <p className="student-access-note">Du deltar som student i dette emnet.</p>}
+            </>}
+            {teacher && section === 'members' && <>
               <section className="course-members" aria-labelledby="course-members-heading">
                 <h3 id="course-members-heading">Deltakere <span>{members.length}</span></h3>
                 <ul className="member-list">
@@ -112,8 +125,7 @@ export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
                   {notice && <p className="api-feedback success" role="status"><Icon name="check" />{notice}</p>}
                 </form>
               </section>
-            </> : <p className="student-access-note">Du deltar som student i dette emnet.</p>}
-            <div className="course-scope-note"><Icon name="sprout" /><p>Moduler og læringsinnhold kommer i neste versjon.</p></div>
+            </>}
           </>}
         </>}
       </div>
