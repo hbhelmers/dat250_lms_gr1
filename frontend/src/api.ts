@@ -1,9 +1,14 @@
+export type CourseRole = 'TEACHER' | 'STUDENT'
+
 export type StoredCourse = {
   id: number
   title: string
   description: string | null
   semester: string
+  role: CourseRole
 }
+
+export type CourseMember = { userId: number; name: string; email: string; role: CourseRole }
 
 export type CreateCourseInput = {
   title: string
@@ -43,7 +48,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     const problem = await response.json().catch(() => null)
     const message = response.status === 401 ? 'Logg inn for å fortsette.'
-      : response.status === 403 ? 'Handlingen kunne ikke bekreftes. Last siden på nytt og prøv igjen.'
+      : response.status === 403 ? problem?.detail ?? 'Handlingen kunne ikke bekreftes. Last siden på nytt og prøv igjen.'
       : response.status >= 500 ? 'Serveren er utilgjengelig akkurat nå. Prøv igjen om litt.'
       : problem?.detail ?? 'Noe gikk galt. Prøv igjen.'
     throw new ApiError(response.status, message, problem?.fieldErrors ?? {})
@@ -64,6 +69,30 @@ export function getSession(signal?: AbortSignal) {
 
 export function getCourses(signal?: AbortSignal) {
   return request<StoredCourse[]>('/api/courses', { signal })
+}
+
+export function getCourse(id: number, signal?: AbortSignal) {
+  return request<StoredCourse>(`/api/courses/${id}`, { signal })
+}
+
+export function getCourseMembers(id: number, signal?: AbortSignal) {
+  return request<CourseMember[]>(`/api/courses/${id}/members`, { signal })
+}
+
+export async function addStudent(id: number, email: string) {
+  return request<CourseMember>(`/api/courses/${id}/students`, {
+    method: 'POST',
+    headers: { ...await csrfHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+}
+
+export async function updateCourse(id: number, course: CreateCourseInput) {
+  return request<StoredCourse>(`/api/courses/${id}`, {
+    method: 'PUT',
+    headers: { ...await csrfHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(course),
+  })
 }
 
 export async function register(input: RegistrationInput) {

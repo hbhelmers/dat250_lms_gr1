@@ -55,6 +55,7 @@ class LmsApplicationTests {
     void clearTestDatabase() {
         repository.deleteAll();
         users.deleteAll();
+        registration.register(new RegistrationRequest("Testlærer", "teacher@example.test", "test-login-password"));
     }
 
     @Test
@@ -75,14 +76,14 @@ class LmsApplicationTests {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "teacher@example.test")
     void coursesStartEmpty() throws Exception {
         mvc.perform(get("/api/courses"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "teacher@example.test")
     void createdCourseIsCommittedAndCanBeReadAgain() throws Exception {
         var result = mvc.perform(post("/api/courses").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(VALID_COURSE))
@@ -107,7 +108,7 @@ class LmsApplicationTests {
             "{\"title\":\"Databaser\",\"description\":\" \",\"semester\":\"Høst 2026\"}",
             "{\"title\":\"Databaser\",\"description\":\"Beskrivelse\",\"semester\":\" \"}"
     })
-    @WithMockUser
+    @WithMockUser(username = "teacher@example.test")
     void requiredFieldsAreValidated(String body) throws Exception {
         mvc.perform(post("/api/courses").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(body))
@@ -116,7 +117,7 @@ class LmsApplicationTests {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "teacher@example.test")
     void overlongTitleIsRejectedBeforeReachingTheDatabase() throws Exception {
         String body = "{\"title\":\"" + "a".repeat(256)
                 + "\",\"description\":\"Beskrivelse\",\"semester\":\"Høst 2026\"}";
@@ -128,7 +129,7 @@ class LmsApplicationTests {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "teacher@example.test")
     void creatingCoursesRequiresCsrfProtection() throws Exception {
         mvc.perform(post("/api/courses").contentType(MediaType.APPLICATION_JSON).content(VALID_COURSE))
                 .andExpect(status().isForbidden());
@@ -136,7 +137,7 @@ class LmsApplicationTests {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "teacher@example.test")
     void unknownCourseReturnsNotFound() throws Exception {
         mvc.perform(get("/api/courses/999999"))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("Fant ikke emnet."));
@@ -144,15 +145,14 @@ class LmsApplicationTests {
 
     @Test
     void browserCanLogInAndUseItsSession() throws Exception {
-        var user = registration.register(new RegistrationRequest(
-                "Testlærer", "teacher@example.test", "test-login-password"));
+        var user = users.findByEmail("teacher@example.test").orElseThrow();
         var result = mvc.perform(formLogin("/api/login")
                         .user("teacher@example.test").password("test-login-password"))
                 .andExpect(status().isNoContent()).andReturn();
         var session = (MockHttpSession) result.getRequest().getSession(false);
 
         mvc.perform(get("/api/session").session(session))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(user.id()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(user.getId()))
                 .andExpect(jsonPath("$.name").value("Testlærer"))
                 .andExpect(jsonPath("$.email").value("teacher@example.test"))
                 .andExpect(jsonPath("$.passwordHash").doesNotExist());
@@ -163,7 +163,6 @@ class LmsApplicationTests {
 
     @Test
     void incorrectPasswordIsRejected() throws Exception {
-        registration.register(new RegistrationRequest("Testlærer", "teacher@example.test", "test-login-password"));
         mvc.perform(formLogin("/api/login").user("teacher@example.test").password("incorrect"))
                 .andExpect(status().isUnauthorized());
     }

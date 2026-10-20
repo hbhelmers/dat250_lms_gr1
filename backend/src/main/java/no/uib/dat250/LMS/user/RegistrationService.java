@@ -8,14 +8,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import no.uib.dat250.LMS.course.LegacyCourseOwnership;
+
 @Service
 public class RegistrationService {
     private final LmsUserRepository users;
     private final PasswordEncoder passwordEncoder;
+    private final LegacyCourseOwnership legacyCourses;
 
-    public RegistrationService(LmsUserRepository users, PasswordEncoder passwordEncoder) {
+    public RegistrationService(LmsUserRepository users, PasswordEncoder passwordEncoder, LegacyCourseOwnership legacyCourses) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
+        this.legacyCourses = legacyCourses;
     }
 
     @Transactional
@@ -25,7 +29,9 @@ public class RegistrationService {
         }
         var user = new LmsUser(request.name(), request.email(), passwordEncoder.encode(request.password()));
         try {
-            return UserResponse.from(users.saveAndFlush(user));
+            users.saveAndFlush(user);
+            legacyCourses.assignTo(user);
+            return UserResponse.from(user);
         } catch (DataIntegrityViolationException exception) {
             // The unique constraint also protects against simultaneous registrations.
             for (Throwable cause = exception; cause != null; cause = cause.getCause()) {

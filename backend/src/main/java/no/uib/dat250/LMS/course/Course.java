@@ -24,6 +24,9 @@ public class Course {
     @Column(nullable = false, length = 50)
     private String semester;
 
+    @Column(name = "legacy_owner_pending", nullable = false)
+    private boolean legacyOwnerPending;
+
     protected Course() {
     }
 
@@ -37,4 +40,12 @@ public class Course {
     public String getTitle() { return title; }
     public String getDescription() { return description; }
     public String getSemester() { return semester; }
+
+    public void update(String title, String description, String semester) {
+        this.title = title;
+        this.description = description;
+        this.semester = semester;
+    }
+
+    void markLegacyOwnershipAssigned() { legacyOwnerPending = false; }
 }

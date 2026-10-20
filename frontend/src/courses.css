@@ -66,6 +66,23 @@
 .course-details-dialog h2 { overflow-wrap: anywhere; }
 .course-scope-note { display: flex; gap: 12px; align-items: flex-start; padding: 18px; border-radius: 8px; background: #f3f7ed; color: #8ca576; font-size: 11px; line-height: 1.8; }
 .course-scope-note .icon { width: 18px; height: 18px; margin-top: 2px; }
+.course-role { display: inline-flex; align-items: center; width: fit-content; flex-shrink: 0; padding: 4px 9px; border-radius: 5px; font-size: 10px; line-height: 1.5; font-weight: 500; }
+.course-role.teacher { color: #8b5738; background: #f8ecdf; }
+.course-role.student { color: #577443; background: #edf3e5; }
+.stored-course-card .course-card-footer > span:last-child { display: inline-flex; align-items: center; gap: 8px; }
+.course-access-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.details-loading { font-size: 13px; color: #839573; padding-block: 25px; }
+.course-members { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
+.course-members h3 { display: flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 600; }
+.course-members h3 > span { font-size: 11px; color: #839573; font-weight: 400; }
+.member-list { list-style: none; padding: 0; margin: 14px 0 24px; }
+.member-list li { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px 0; border-bottom: 1px solid #f0f3ec; }
+.member-list li > div { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.member-list strong { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
+.member-list li > div > span { font-size: 11px; color: #849873; overflow-wrap: anywhere; }
+.add-student-form { margin-bottom: 25px; }
+.add-student-form > .api-feedback { margin: 15px 0 0; }
+.student-access-note { font-size: 12px; color: #6d8655; margin-bottom: 25px; }
 .demo-return-button { position: fixed; bottom: 18px; right: 24px; z-index: 25; display: flex; align-items: center; gap: 12px; padding: 13px 18px; font-size: 11px; background: #fff; color: #b95836; border: 1px solid #e9ccbc; border-radius: 8px; box-shadow: 0 5px 20px #29352f13; }
 .demo-return-button .icon { width: 14px; height: 14px; }
 .demo-return-button:hover { background: #fbf0e8; }

@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, createCourse } from '../api'
+import { ApiError, createCourse, updateCourse } from '../api'
 import type { StoredCourse } from '../api'
 import { Icon } from './Icon'
 
-export function CreateCourseDialog({ onClose, onSaved, onSessionExpired }: {
+export function CreateCourseDialog({ course, onClose, onSaved, onSessionExpired }: {
+  course?: StoredCourse
   onClose: () => void
   onSaved: (course: StoredCourse) => void
   onSessionExpired: () => void
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const [title, setTitle] = useState(course?.title ?? '')
+  const [description, setDescription] = useState(course?.description ?? '')
   const [semester, setSemester] = useState(() => {
+    if (course) return course.semester
     const today = new Date()
     return `${today.getMonth() >= 6 ? 'Høst' : 'Vår'} ${today.getFullYear()}`
   })
@@ -27,7 +29,7 @@ export function CreateCourseDialog({ onClose, onSaved, onSessionExpired }: {
     <dialog ref={dialogRef} className="create-course-dialog" aria-labelledby="create-course-heading"
       onClose={onClose} onCancel={(event) => { if (saving) event.preventDefault() }}>
       <div className="dialog-header">
-        <div><span className="eyebrow">PLASS TIL NYE IDEER</span><h2 id="create-course-heading">Opprett et emne</h2></div>
+        <div><span className="eyebrow">PLASS TIL NYE IDEER</span><h2 id="create-course-heading">{course ? 'Rediger emne' : 'Opprett et emne'}</h2></div>
         <button type="button" className="icon-button" aria-label="Lukk skjemaet" disabled={saving}
           onClick={() => dialogRef.current?.close()}><Icon name="close" /></button>
       </div>
@@ -38,7 +40,8 @@ export function CreateCourseDialog({ onClose, onSaved, onSessionExpired }: {
         setError('')
         setFieldErrors({})
         try {
-          onSaved(await createCourse({ title, description, semester }))
+          const input = { title, description, semester }
+          onSaved(course ? await updateCourse(course.id, input) : await createCourse(input))
         } catch (failure) {
           if (failure instanceof ApiError) {
             if (failure.status === 401) { onSessionExpired(); return }
@@ -49,7 +52,7 @@ export function CreateCourseDialog({ onClose, onSaved, onSessionExpired }: {
           setSaving(false)
         }
       }}>
-        <p className="form-intro">Gi emnet en tittel, velg semester og skriv hva det handler om.</p>
+        <p className="form-intro">{course ? 'Oppdater emnets tittel, semester og beskrivelse.' : 'Gi emnet en tittel, velg semester og skriv hva det handler om. Du blir lærer i emnet.'}</p>
         <div className="form-field">
           <label htmlFor="course-title">Tittel</label>
           <input id="course-title" name="title" placeholder="F.eks. DAT250 – Programvareteknologi"
@@ -80,7 +83,7 @@ export function CreateCourseDialog({ onClose, onSaved, onSessionExpired }: {
           <button type="button" className="secondary-button" disabled={saving}
             onClick={() => dialogRef.current?.close()}>Avbryt</button>
           <button type="submit" className="primary-button" disabled={saving}>
-            {saving ? 'Lagrer …' : 'Opprett emne'}<Icon name="arrow" />
+            {saving ? 'Lagrer …' : course ? 'Lagre endringer' : 'Opprett emne'}<Icon name="arrow" />
           </button>
         </div>
       </form>
