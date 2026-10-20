@@ -67,7 +67,13 @@ public class CourseContentController {
         content.deletePage(courseId, moduleId, pageId, principal.getName());
     }
 
-    @PutMapping("/{moduleId}/pages/order")
+    @DeleteMapping("/{moduleId}/items/{itemId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteItem(@PathVariable Long courseId, @PathVariable Long moduleId, @PathVariable Long itemId, Principal principal) {
+        content.deleteItem(courseId, moduleId, itemId, principal.getName());
+    }
+
+    @PutMapping({"/{moduleId}/pages/order", "/{moduleId}/items/order"})
     public ModuleResponse reorderPages(@PathVariable Long courseId, @PathVariable Long moduleId,
             @Valid @RequestBody OrderRequest request, Principal principal) {
         return content.reorderPages(courseId, moduleId, request, principal.getName());

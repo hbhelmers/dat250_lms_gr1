@@ -5,6 +5,7 @@ import java.util.Locale;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import no.uib.dat250.LMS.course.CourseRole;
 
 public record RegistrationRequest(
         @NotBlank(message = "Skriv inn navnet ditt.")
@@ -12,12 +13,17 @@ public record RegistrationRequest(
         @NotBlank(message = "Skriv inn e-postadressen din.")
         @Email(message = "Skriv inn en gyldig e-postadresse.")
         @Size(max = 254, message = "E-postadressen kan ha maks 254 tegn.") String email,
-        @NotBlank(message = "Velg et passord.")
-        @Size(min = 15, max = 128, message = "Passordet må ha mellom 15 og 128 tegn.") String password) {
+        @ValidPassword String password, CourseRole preferredRole, Boolean includeExamples) {
 
     public RegistrationRequest {
         name = name == null ? null : name.strip();
         email = normalizeEmail(email);
+        preferredRole = preferredRole == null ? CourseRole.STUDENT : preferredRole;
+        includeExamples = Boolean.TRUE.equals(includeExamples);
+    }
+
+    public RegistrationRequest(String name, String email, String password) {
+        this(name, email, password, CourseRole.STUDENT, false);
     }
 
     public static String normalizeEmail(String email) {

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import Markdown from 'react-markdown'
 import { ApiError } from '../api'
-import type { LearningModule, LearningPage, PageInput } from '../api'
+import type { LearningModule, LearningItem, PageInput } from '../api'
+import { localDateTime } from '../dateTime'
 
 export function LessonBody({ body }: { body: string }) {
   return <div className="lesson-markdown"><Markdown skipHtml>{body}</Markdown></div>
@@ -38,15 +39,8 @@ export function ModuleEditor({ module, onSave, onCancel, onSessionExpired }: {
   </form>
 }
 
-function localDateTime(value: string | null | undefined) {
-  if (!value) return ''
-  const date = new Date(value)
-  const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-  return shifted.toISOString().slice(0, 16)
-}
-
 export function PageEditor({ page, onSave, onCancel, onSessionExpired }: {
-  page?: LearningPage
+  page?: LearningItem
   onSave: (input: PageInput) => Promise<void>
   onCancel: () => void
   onSessionExpired: () => void

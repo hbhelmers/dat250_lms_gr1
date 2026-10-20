@@ -1,3 +1,3 @@
 package no.uib.dat250.LMS.content;
 
-public enum ContentType { PAGE }
+public enum ContentType { PAGE, QUIZ }

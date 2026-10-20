@@ -106,6 +106,18 @@ public class CourseContentService {
         access.lockForTeacher(courseId, email);
         requireModule(courseId, moduleId);
         items.delete(requirePage(moduleId, pageId));
+        reindexItems(moduleId);
+    }
+
+    @Transactional
+    public void deleteItem(Long courseId, Long moduleId, Long itemId, String email) {
+        access.lockForTeacher(courseId, email);
+        requireModule(courseId, moduleId);
+        items.delete(items.findByIdAndModuleId(itemId, moduleId).orElseThrow(() -> notFound("Fant ikke innholdet.")));
+        reindexItems(moduleId);
+    }
+
+    private void reindexItems(Long moduleId) {
         var remaining = items.findByModuleIdOrderByPositionAscIdAsc(moduleId);
         for (int index = 0; index < remaining.size(); index++) remaining.get(index).setPosition(index);
     }
@@ -124,7 +136,8 @@ public class CourseContentService {
     }
 
     private ContentItem requirePage(Long moduleId, Long pageId) {
-        return items.findByIdAndModuleId(pageId, moduleId).orElseThrow(() -> notFound("Fant ikke siden."));
+        return items.findByIdAndModuleId(pageId, moduleId).filter(item -> item.getType() == ContentType.PAGE)
+                .orElseThrow(() -> notFound("Fant ikke siden."));
     }
 
     private ModuleResponse moduleResponse(CourseModule module) {

@@ -85,7 +85,7 @@ export function CourseWorkspace({ onOpenDemo }: { onOpenDemo: () => void }) {
         </nav>
         <div className="sidebar-bottom">
           <div className="semester-note"><Icon name="sprout" /><strong>Små steg.<br />Stor fremgang.</strong><p>Et godt emne starter<br />med en god idé.</p><span>ET STED FOR LÆRING</span></div>
-          <div className="sidebar-profile"><span className="user-avatar">{session?.name.charAt(0).toLocaleUpperCase('nb') || 'L'}</span><div><strong title={session?.email}>{session?.name || 'Velkommen'}</strong><span>{session ? 'Innlogget' : 'Ditt læringsrom venter'}</span></div>{session && <span className="online-indicator" />}</div>
+          <div className="sidebar-profile"><span className="user-avatar">{session?.name.charAt(0).toLocaleUpperCase('nb') || 'L'}</span><div><strong title={session?.email}>{session?.name || 'Velkommen'}</strong><span>{session ? session.preferredRole === 'TEACHER' ? 'Lærerprofil' : 'Studentprofil' : 'Ditt læringsrom venter'}</span></div>{session && <span className="online-indicator" />}</div>
         </div>
       </aside>
 

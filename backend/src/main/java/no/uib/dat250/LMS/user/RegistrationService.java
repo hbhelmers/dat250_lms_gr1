@@ -15,11 +15,13 @@ public class RegistrationService {
     private final LmsUserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final LegacyCourseOwnership legacyCourses;
+    private final ExampleSetupService examples;
 
-    public RegistrationService(LmsUserRepository users, PasswordEncoder passwordEncoder, LegacyCourseOwnership legacyCourses) {
+    public RegistrationService(LmsUserRepository users, PasswordEncoder passwordEncoder, LegacyCourseOwnership legacyCourses, ExampleSetupService examples) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.legacyCourses = legacyCourses;
+        this.examples = examples;
     }
 
     @Transactional
@@ -27,10 +29,11 @@ public class RegistrationService {
         if (users.existsByEmail(request.email())) {
             throw new EmailAlreadyRegisteredException();
         }
-        var user = new LmsUser(request.name(), request.email(), passwordEncoder.encode(request.password()));
+        var user = new LmsUser(request.name(), request.email(), passwordEncoder.encode(request.password()), request.preferredRole());
         try {
             users.saveAndFlush(user);
             legacyCourses.assignTo(user);
+            if (request.includeExamples()) examples.addExamples(user);
             return UserResponse.from(user);
         } catch (DataIntegrityViolationException exception) {
             // The unique constraint also protects against simultaneous registrations.

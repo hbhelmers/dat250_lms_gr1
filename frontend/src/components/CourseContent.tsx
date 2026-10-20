@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError, deleteLearningPage, deleteModule, getModules, saveLearningPage, saveModule, setModuleOrder, setPageOrder } from '../api'
-import type { LearningModule, LearningPage } from '../api'
+import { ApiError, deleteLearningPage, deleteLearningItem, deleteModule, getModules, saveLearningPage, saveModule, saveQuiz, setModuleOrder, setPageOrder } from '../api'
+import type { LearningModule, LearningItem } from '../api'
 import { Icon } from './Icon'
 import { LessonBody, ModuleEditor, PageEditor } from './LessonEditors'
+import { QuizEditor } from './QuizEditor'
+import { QuizPanel } from './QuizPanel'
 
 type Selection = { moduleId: number | null; pageId: number | null }
-type Editor = { kind: 'module'; module?: LearningModule } | { kind: 'page'; moduleId: number; page?: LearningPage }
+type Editor = { kind: 'module'; module?: LearningModule } | { kind: 'page'; moduleId: number; page?: LearningItem } | { kind: 'quiz'; moduleId: number }
 
-function pageStatus(page: LearningPage) {
+function pageStatus(page: LearningItem) {
   if (!page.published) return 'Utkast'
   if (page.visibleFrom && new Date(page.visibleFrom).getTime() > Date.now()) return 'Planlagt'
   if (page.visibleUntil && new Date(page.visibleUntil).getTime() <= Date.now()) return 'Utløpt'
@@ -33,9 +35,10 @@ export function CourseContent({ courseId, teacher, onSessionExpired, onWorkingCh
   const [editor, setEditor] = useState<Editor | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [quizWorking, setQuizWorking] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const blocked = busy || editor !== null
+  const blocked = busy || editor !== null || quizWorking
 
   useEffect(() => {
     onWorkingChange(blocked)
@@ -82,14 +85,14 @@ export function CourseContent({ courseId, teacher, onSessionExpired, onWorkingCh
   if (loading) return <p className="details-loading" role="status">Henter moduler …</p>
 
   return <section className="course-content" aria-label="Undervisningsinnhold">
-    <div className="content-toolbar"><h3>Moduler og sider</h3><div>
+    <div className="content-toolbar"><h3>Moduler og innhold</h3><div>
       <button className="secondary-button" disabled={blocked} onClick={() => void mutate(async () => {}, 'Innholdet er oppdatert.')}>Oppdater innhold</button>
       {teacher && <button className="primary-button" disabled={blocked} onClick={() => { setNotice(''); setEditor({ kind: 'module' }) }}>Ny modul <span aria-hidden="true">+</span></button>}
     </div></div>
     {error && <p className="api-feedback error" role="alert">{error}</p>}
     {notice && <p className="api-feedback success" role="status">{notice}</p>}
     <div className="lesson-layout">
-      <nav className="lesson-sidebar" aria-label="Moduler og sider">
+      <nav className="lesson-sidebar" aria-label="Moduler og innhold">
         {modules.map((entry, index) => <div className="lesson-module" key={entry.id}>
           <div className="lesson-module-heading"><button className={module?.id === entry.id ? 'selected' : ''} disabled={blocked}
             onClick={() => { setSelection({ moduleId: entry.id, pageId: teacher ? null : entry.items[0]?.id ?? null }); setNotice('') }}>
@@ -104,11 +107,11 @@ export function CourseContent({ courseId, teacher, onSessionExpired, onWorkingCh
           {entry.items.map((item) => <button key={item.id} className={`lesson-link ${page?.id === item.id ? 'selected' : ''}`}
             disabled={blocked} aria-current={page?.id === item.id ? 'page' : undefined}
             onClick={() => { setSelection({ moduleId: entry.id, pageId: item.id }); setNotice('') }}>
-            <Icon name="page" /><span>{item.title}{teacher && <small>{pageStatus(item)}</small>}</span>
+            <Icon name={item.type === 'QUIZ' ? 'quiz' : 'page'} /><span>{item.title}{teacher && <small>{item.type === 'QUIZ' ? 'Quiz · ' : ''}{pageStatus(item)}</small>}</span>
           </button>)}
-          {teacher && entry.items.length === 0 && <p className="module-empty">Ingen sider ennå</p>}
+          {teacher && entry.items.length === 0 && <p className="module-empty">Ingen innhold ennå</p>}
         </div>)}
-        {modules.length === 0 && <p className="module-empty">{teacher ? 'Begynn med en modul.' : 'Ingen publiserte sider ennå.'}</p>}
+        {modules.length === 0 && <p className="module-empty">{teacher ? 'Begynn med en modul.' : 'Ingen publisert innhold ennå.'}</p>}
       </nav>
 
       <div className="lesson-main">
@@ -127,7 +130,30 @@ export function CourseContent({ courseId, teacher, onSessionExpired, onWorkingCh
               { moduleId: editor.moduleId, pageId: saved.id })
             setEditor(null); setError(''); setNotice(input.published ? 'Siden er lagret. Synligheten følger valgt tidsrom.' : 'Siden er lagret som utkast.')
             try { await refresh({ moduleId: editor.moduleId, pageId: saved.id }) } catch (failure) { reportError(failure) }
-          }} /> : page && module ? <article className="lesson-reader">
+          }} /> : editor?.kind === 'quiz' ? <QuizEditor onCancel={() => setEditor(null)} onSessionExpired={onSessionExpired}
+            onSave={async (input) => {
+              const saved = await saveQuiz(courseId, editor.moduleId, input)
+              applyModules(modules.map((entry) => entry.id !== editor.moduleId ? entry : { ...entry, items: [...entry.items, saved.content] }),
+                { moduleId: editor.moduleId, pageId: saved.content.id })
+              setEditor(null); setError(''); setNotice('Quizen er lagret.')
+              try { await refresh({ moduleId: editor.moduleId, pageId: saved.content.id }) } catch (failure) { reportError(failure) }
+            }} /> : page && module ? <article className="lesson-reader">
+            {page.type === 'QUIZ' ? <>
+              {teacher && <div className="lesson-actions page-management">
+                <span className="page-status">{pageStatus(page)}</span>
+                <button className="text-button danger-button" disabled={busy || quizWorking} onClick={() => {
+                  if (window.confirm(`Slette quizen «${page.title}» og alle innleverte forsøk?`)) void mutate(() => deleteLearningItem(courseId, module.id, page.id), 'Quizen er slettet.', { moduleId: module.id, pageId: null })
+                }}>Slett quiz</button>
+                <div className="order-controls">
+                  <button disabled={busy || quizWorking || module.items[0]?.id === page.id} aria-label="Flytt quizen opp" onClick={() => void mutate(() => setPageOrder(courseId, module.id, movedIds(module.items, page.id, -1)), 'Innholdsrekkefølgen er lagret.')}>↑</button>
+                  <button disabled={busy || quizWorking || module.items.at(-1)?.id === page.id} aria-label="Flytt quizen ned" onClick={() => void mutate(() => setPageOrder(courseId, module.id, movedIds(module.items, page.id, 1)), 'Innholdsrekkefølgen er lagret.')}>↓</button>
+                </div>
+              </div>}
+              <QuizPanel key={page.id} courseId={courseId} moduleId={module.id} quizId={page.id} teacher={teacher}
+                onSessionExpired={onSessionExpired} onWorkingChange={setQuizWorking} onChanged={(saved) => {
+                  applyModules(modules.map((entry) => ({ ...entry, items: entry.items.map((item) => item.id === saved.id ? saved : item) })))
+                }} />
+            </> : <>
             <span className="eyebrow">{module.title}</span>
             <div className="lesson-title"><h3>{page.title}</h3>{teacher && <span className="page-status">{pageStatus(page)}</span>}</div>
             {teacher && <div className="lesson-actions page-management">
@@ -142,19 +168,21 @@ export function CourseContent({ courseId, teacher, onSessionExpired, onWorkingCh
               </div>
             </div>}
             <LessonBody body={page.body} />
+            </>}
             {!teacher && module.items.findIndex((item) => item.id === page.id) < module.items.length - 1 && <button className="secondary-button next-lesson"
-              onClick={() => setSelection({ moduleId: module.id, pageId: module.items[module.items.findIndex((item) => item.id === page.id) + 1].id })}>Neste side <Icon name="arrow" /></button>}
+              disabled={quizWorking} onClick={() => setSelection({ moduleId: module.id, pageId: module.items[module.items.findIndex((item) => item.id === page.id) + 1].id })}>Neste innhold <Icon name="arrow" /></button>}
           </article> : module ? <div className="module-overview"><span className="eyebrow">MODUL</span><h3>{module.title}</h3>
-            <p>{module.items.length} {module.items.length === 1 ? 'side' : 'sider'} i denne modulen.</p>
+            <p>{module.items.length} innholdselementer i denne modulen.</p>
             {teacher && <div className="lesson-actions">
               <button className="primary-button" disabled={busy} onClick={() => setEditor({ kind: 'page', moduleId: module.id })}>Ny side <span aria-hidden="true">+</span></button>
+              <button className="secondary-button" disabled={busy} onClick={() => { setNotice(''); setEditor({ kind: 'quiz', moduleId: module.id }) }}>Ny quiz <Icon name="quiz" /></button>
               <button className="secondary-button" disabled={busy} onClick={() => setEditor({ kind: 'module', module })}>Endre modultittel</button>
               <button className="text-button danger-button" disabled={busy} onClick={() => {
-                if (window.confirm(`Slette modulen «${module.title}» og alle sidene i den?`)) void mutate(() => deleteModule(courseId, module.id), 'Modulen er slettet.')
+                if (window.confirm(`Slette modulen «${module.title}» med alt innhold og alle quizforsøk?`)) void mutate(() => deleteModule(courseId, module.id), 'Modulen er slettet.')
               }}>Slett modul</button>
             </div>}
           </div> : <div className="content-empty"><Icon name="sprout" /><h3>{teacher ? 'Gi emnet innhold.' : 'Innholdet kommer snart.'}</h3>
-            <p>{teacher ? 'Lag en modul, skriv en side og publiser når den er klar.' : 'Publiserte sider vises her når læreren gjør dem tilgjengelige.'}</p>
+            <p>{teacher ? 'Lag en modul med sider og quizer, og publiser når innholdet er klart.' : 'Publisert innhold vises her når læreren gjør det tilgjengelig.'}</p>
           </div>}
       </div>
     </div>

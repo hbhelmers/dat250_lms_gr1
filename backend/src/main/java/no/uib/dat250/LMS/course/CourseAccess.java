@@ -27,9 +27,16 @@ public class CourseAccess {
 
     // Call inside a write transaction; all ordering and membership writes share this lock.
     public Course lockForTeacher(Long courseId, String email) {
-        var course = courses.findForUpdate(courseId)
+        var membership = lockForMember(courseId, email);
+        if (membership.getRole() != CourseRole.TEACHER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Du må være lærer i emnet for å gjøre dette.");
+        }
+        return membership.getCourse();
+    }
+
+    public CourseEnrollment lockForMember(Long courseId, String email) {
+        courses.findForUpdate(courseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fant ikke emnet."));
-        requireTeacher(courseId, email);
-        return course;
+        return requireMember(courseId, email);
     }
 }

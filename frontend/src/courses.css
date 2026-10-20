@@ -13,6 +13,24 @@
 .auth-mode-switch button { padding: 10px 8px; border: 0; border-radius: 5px; background: transparent; color: #798d68; font-size: 12px; }
 .auth-mode-switch button[aria-pressed="true"] { background: #fff; color: #425b32; box-shadow: 0 1px 4px #29352f0c; }
 .auth-mode-switch button:disabled { opacity: .6; cursor: default; }
+.registration-role { margin: 0 0 22px; padding: 0; border: 0; min-width: 0; }
+.registration-role legend { font-size: 12px; font-weight: 500; color: #526346; margin-bottom: 10px; }
+.registration-role-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.registration-role-options label { display: flex; align-items: center; gap: 10px; padding: 13px; border: 1px solid #dfe6d8; border-radius: 7px; font-size: 13px; color: #6a7d5c; cursor: pointer; }
+.registration-role-options label.selected { background: #eff5e8; border-color: #a8bd95; color: #456334; }
+.registration-role input, .registration-examples input { accent-color: #648a4b; width: 16px; height: 16px; flex-shrink: 0; }
+.registration-examples { padding: 17px; background: #f6f8f1; border: 1px solid #e4eadd; border-radius: 8px; margin-bottom: 22px; }
+.registration-examples label { display: flex; gap: 10px; align-items: center; font-size: 13px; font-weight: 500; color: #506b3c; cursor: pointer; }
+.registration-examples p { font-size: 11px; line-height: 1.8; color: #80916f; margin-top: 10px; }
+.demo-account-panel { border-top: 1px solid var(--border); margin-top: 25px; padding-top: 20px; }
+.demo-account-panel summary { color: #607b49; font-size: 12px; cursor: pointer; }
+.demo-account-panel > p { font-size: 11px; line-height: 1.8; color: #81946f; margin-top: 15px; }
+.demo-account-panel code { color: #536b40; background: #f0f4e9; padding: 3px 6px; border-radius: 4px; }
+.demo-account-choice { display: flex; gap: 12px; align-items: center; justify-content: space-between; background: #f8faf5; border: 1px solid #e4eadc; border-radius: 7px; padding: 13px; margin-top: 11px; width: 100%; text-align: left; color: #697f55; }
+.demo-account-choice:hover { background: #eef4e5; }
+.demo-account-choice strong { display: block; font-size: 12px; font-weight: 500; }
+.demo-account-choice small { display: block; font-size: 11px; margin-top: 6px; }
+.demo-account-choice .icon { width: 16px; height: 16px; }
 .login-symbol { background: #eaf0e4; color: #8ca177; width: 48px; height: 48px; border-radius: 13px; display: grid; place-items: center; margin-bottom: 22px; }
 .login-symbol .icon { width: 25px; height: 25px; }
 .login-panel h2 { font-size: 25px; font-weight: 600; letter-spacing: -.8px; }

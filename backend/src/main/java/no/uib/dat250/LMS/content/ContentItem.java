@@ -36,7 +36,12 @@ public class ContentItem {
     protected ContentItem() {}
 
     public ContentItem(CourseModule module, PageRequest request, int position) {
+        this(module, ContentType.PAGE, request, position);
+    }
+
+    public ContentItem(CourseModule module, ContentType type, PageRequest request, int position) {
         this.module = module;
+        this.type = type;
         this.position = position;
         update(request);
     }

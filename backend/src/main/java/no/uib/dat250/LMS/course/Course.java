@@ -27,6 +27,9 @@ public class Course {
     @Column(name = "legacy_owner_pending", nullable = false)
     private boolean legacyOwnerPending;
 
+    @Column(length = 32)
+    private String exampleTemplate;
+
     protected Course() {
     }
 
@@ -40,6 +43,13 @@ public class Course {
     public String getTitle() { return title; }
     public String getDescription() { return description; }
     public String getSemester() { return semester; }
+    public String getExampleTemplate() { return exampleTemplate; }
+
+    public static Course example(String title, String description, String semester, String template) {
+        var course = new Course(title, description, semester);
+        course.exampleTemplate = template;
+        return course;
+    }
 
     public void update(String title, String description, String semester) {
         this.title = title;

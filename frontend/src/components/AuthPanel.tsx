@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { ApiError, login, register } from '../api'
-import type { Session } from '../api'
+import { useEffect, useState } from 'react'
+import { ApiError, getDemoAccess, login, register } from '../api'
+import type { CourseRole, DemoAccess, Session } from '../api'
 import { Icon } from './Icon'
 
 export function AuthPanel({ onLoggedIn, onOpenDemo, error: externalError, onClearError }: {
@@ -14,11 +14,22 @@ export function AuthPanel({ onLoggedIn, onOpenDemo, error: externalError, onClea
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
+  const [preferredRole, setPreferredRole] = useState<CourseRole>('STUDENT')
+  const [includeExamples, setIncludeExamples] = useState(true)
+  const [demoAccess, setDemoAccess] = useState<DemoAccess | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const registering = mode === 'register'
+
+  useEffect(() => {
+    const controller = new AbortController()
+    getDemoAccess(controller.signal).then((data) => {
+      if (!controller.signal.aborted) setDemoAccess(data)
+    }).catch(() => { /* Test accounts are optional; normal login still works. */ })
+    return () => controller.abort()
+  }, [])
 
   function switchMode(next: typeof mode) {
     setMode(next)
@@ -53,16 +64,22 @@ export function AuthPanel({ onLoggedIn, onOpenDemo, error: externalError, onClea
           setFieldErrors({ confirmation: 'Passordene må være like.' })
           return
         }
+        if (registering && (Array.from(password).length < 8 || !/[\p{P}\p{S}]/u.test(password))) {
+          setFieldErrors({ password: 'Bruk minst 8 tegn og minst ett spesialtegn, for eksempel !, ? eller #.' })
+          return
+        }
         setBusy(true)
         try {
           if (registering) {
-            const user = await register({ name, email, password })
+            const user = await register({ name, email, password, preferredRole, includeExamples: Boolean(demoAccess?.enabled) && includeExamples })
             setEmail(user.email)
             setName('')
             setPassword('')
             setConfirmation('')
             setMode('login')
-            setNotice('Kontoen din er opprettet. Logg inn for å fortsette.')
+            setNotice(includeExamples && demoAccess?.enabled
+              ? 'Kontoen din og eksempelfagene er klare. Logg inn for å fortsette.'
+              : 'Kontoen din er opprettet. Logg inn for å fortsette.')
           } else {
             const current = await login(email, password)
             setPassword('')
@@ -86,6 +103,22 @@ export function AuthPanel({ onLoggedIn, onOpenDemo, error: externalError, onClea
             aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? 'auth-name-error' : undefined} />
           {fieldErrors.name && <p className="field-error" id="auth-name-error">{fieldErrors.name}</p>}
         </div>}
+        {registering && <fieldset className="registration-role" disabled={busy}>
+          <legend>Jeg vil starte som</legend>
+          <div className="registration-role-options">
+            <label className={preferredRole === 'STUDENT' ? 'selected' : ''}><input type="radio" name="preferredRole" value="STUDENT"
+              checked={preferredRole === 'STUDENT'} onChange={() => setPreferredRole('STUDENT')} /><span>Student</span></label>
+            <label className={preferredRole === 'TEACHER' ? 'selected' : ''}><input type="radio" name="preferredRole" value="TEACHER"
+              checked={preferredRole === 'TEACHER'} onChange={() => setPreferredRole('TEACHER')} /><span>Lærer</span></label>
+          </div>
+          <p className="field-hint">Du kan ha ulike roller i ulike emner.</p>
+        </fieldset>}
+        {registering && demoAccess?.enabled && <div className="registration-examples">
+          <label><input type="checkbox" checked={includeExamples} onChange={(event) => setIncludeExamples(event.target.checked)} disabled={busy} />
+            <span>Legg til eksempelfag</span></label>
+          <p>DAT250 og DAT100 med moduler, sider og quizer. Fjern haken for å starte med et tomt læringsrom.</p>
+          {includeExamples && <p>{preferredRole === 'TEACHER' ? 'Du får egne kopier som du kan redigere.' : 'Du blir student i eksempellærerens fag.'}</p>}
+        </div>}
         <div className="form-field">
           <label htmlFor="auth-email">E-postadresse</label>
           <input id="auth-email" name="email" type="email" autoComplete="username" value={email}
@@ -99,17 +132,17 @@ export function AuthPanel({ onLoggedIn, onOpenDemo, error: externalError, onClea
           <input id="auth-password" name="password" type="password" value={password}
             autoComplete={registering ? 'new-password' : 'current-password'}
             onChange={(event) => setPassword(event.target.value)} required disabled={busy}
-            minLength={registering ? 15 : undefined} maxLength={registering ? 128 : undefined}
+            minLength={registering ? 8 : undefined}
             aria-invalid={Boolean(fieldErrors.password)}
             aria-describedby={fieldErrors.password ? 'auth-password-error' : registering ? 'auth-password-hint' : undefined} />
-          {registering && <p className="field-hint" id="auth-password-hint">Bruk 15–128 tegn, gjerne en lang setning.</p>}
+          {registering && <p className="field-hint" id="auth-password-hint">Minst 8 tegn og ett spesialtegn, for eksempel !, ? eller #.</p>}
           {fieldErrors.password && <p className="field-error" id="auth-password-error">{fieldErrors.password}</p>}
         </div>
         {registering && <div className="form-field">
           <label htmlFor="auth-confirmation">Gjenta passord</label>
           <input id="auth-confirmation" name="confirmation" type="password" autoComplete="new-password"
             value={confirmation} onChange={(event) => setConfirmation(event.target.value)}
-            required maxLength={128} disabled={busy} aria-invalid={Boolean(fieldErrors.confirmation)}
+            required disabled={busy} aria-invalid={Boolean(fieldErrors.confirmation)}
             aria-describedby={fieldErrors.confirmation ? 'auth-confirmation-error' : undefined} />
           {fieldErrors.confirmation && <p className="field-error" id="auth-confirmation-error">{fieldErrors.confirmation}</p>}
         </div>}
@@ -119,6 +152,15 @@ export function AuthPanel({ onLoggedIn, onOpenDemo, error: externalError, onClea
           <Icon name="arrow" />
         </button>
       </form>
+      {!registering && demoAccess?.enabled && <details className="demo-account-panel">
+        <summary>Prøv ferdige testkontoer</summary>
+        <p>Passord for begge: <code>{demoAccess.password}</code></p>
+        {([{ role: 'Lærer', email: demoAccess.teacherEmail }, { role: 'Student', email: demoAccess.studentEmail }]).map((account) => <button
+          key={account.role} className="demo-account-choice" disabled={busy} onClick={() => {
+            setEmail(account.email ?? ''); setPassword(demoAccess.password ?? ''); setError(''); setFieldErrors({}); onClearError()
+            setNotice('Testkontoen er fylt ut. Trykk Logg inn.')
+          }}><span><strong>{account.role}</strong><small>{account.email}</small></span><Icon name="arrow" /></button>)}
+      </details>}
       <div className="login-demo-link"><span>Bare nysgjerrig?</span>
         <button className="text-button" disabled={busy} onClick={onOpenDemo}>Utforsk frontend-demoen <Icon name="arrow" /></button>
       </div>

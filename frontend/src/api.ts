@@ -10,12 +10,20 @@ export type StoredCourse = {
 
 export type CourseMember = { userId: number; name: string; email: string; role: CourseRole }
 
-export type LearningPage = {
-  id: number; moduleId: number; type: 'PAGE'; title: string; body: string; position: number
+export type LearningItem = {
+  id: number; moduleId: number; type: 'PAGE' | 'QUIZ'; title: string; body: string; position: number
   published: boolean; visibleFrom: string | null; visibleUntil: string | null
 }
-export type LearningModule = { id: number; title: string; position: number; items: LearningPage[] }
-export type PageInput = Pick<LearningPage, 'title' | 'body' | 'published' | 'visibleFrom' | 'visibleUntil'>
+export type LearningModule = { id: number; title: string; position: number; items: LearningItem[] }
+export type PageInput = Pick<LearningItem, 'title' | 'body' | 'published' | 'visibleFrom' | 'visibleUntil'>
+export type QuizQuestionInput = { prompt: string; options: string[]; correctOption: number; hint: string }
+export type QuizInput = PageInput & { maxAttempts: number; deadline: string | null; resultsVisible: boolean; questions: QuizQuestionInput[] }
+export type QuizQuestion = { id: number; prompt: string; options: string[]; correctOption: number | null; hint: string | null }
+export type QuizAttempt = {
+  id: number; number: number; submittedAt: string; score: number | null; total: number; studentName: string | null; studentEmail: string | null
+  answers: { questionId: number; selectedOption: number; correct: boolean; correctOption: number; hint: string }[]
+}
+export type Quiz = { content: LearningItem; maxAttempts: number; deadline: string | null; resultsVisible: boolean; questionsLocked: boolean; questions: QuizQuestion[]; attempts: QuizAttempt[] }
 
 export type CreateCourseInput = {
   title: string
@@ -23,9 +31,10 @@ export type CreateCourseInput = {
   semester: string
 }
 
-export type Session = { id: number; name: string; email: string }
+export type Session = { id: number; name: string; email: string; preferredRole: CourseRole }
 
-export type RegistrationInput = { name: string; email: string; password: string }
+export type RegistrationInput = { name: string; email: string; password: string; preferredRole: CourseRole; includeExamples: boolean }
+export type DemoAccess = { enabled: boolean; teacherEmail: string | null; studentEmail: string | null; password: string | null }
 
 export class ApiError extends Error {
   readonly status: number
@@ -74,6 +83,10 @@ export function getSession(signal?: AbortSignal) {
   return request<Session>('/api/session', { signal })
 }
 
+export function getDemoAccess(signal?: AbortSignal) {
+  return request<DemoAccess>('/api/demo-access', { signal })
+}
+
 export function getCourses(signal?: AbortSignal) {
   return request<StoredCourse[]>('/api/courses', { signal })
 }
@@ -112,7 +125,7 @@ export function setModuleOrder(courseId: number, ids: number[]) {
 }
 
 export function saveLearningPage(courseId: number, moduleId: number, input: PageInput, pageId?: number) {
-  return contentWrite<LearningPage>(`/api/courses/${courseId}/modules/${moduleId}/pages${pageId === undefined ? '' : `/${pageId}`}`,
+  return contentWrite<LearningItem>(`/api/courses/${courseId}/modules/${moduleId}/pages${pageId === undefined ? '' : `/${pageId}`}`,
     pageId === undefined ? 'POST' : 'PUT', input)
 }
 
@@ -121,7 +134,26 @@ export function deleteLearningPage(courseId: number, moduleId: number, pageId: n
 }
 
 export function setPageOrder(courseId: number, moduleId: number, ids: number[]) {
-  return contentWrite<LearningModule>(`/api/courses/${courseId}/modules/${moduleId}/pages/order`, 'PUT', { ids })
+  return contentWrite<LearningModule>(`/api/courses/${courseId}/modules/${moduleId}/items/order`, 'PUT', { ids })
+}
+
+function quizPath(courseId: number, moduleId: number, quizId?: number) {
+  return `/api/courses/${courseId}/modules/${moduleId}/quizzes${quizId === undefined ? '' : `/${quizId}`}`
+}
+export function getQuiz(courseId: number, moduleId: number, quizId: number, signal?: AbortSignal) {
+  return request<Quiz>(quizPath(courseId, moduleId, quizId), { signal })
+}
+export function saveQuiz(courseId: number, moduleId: number, input: QuizInput, quizId?: number) {
+  return contentWrite<Quiz>(quizPath(courseId, moduleId, quizId), quizId === undefined ? 'POST' : 'PUT', input)
+}
+export function submitQuiz(courseId: number, moduleId: number, quizId: number, submissionId: string, answers: { questionId: number; option: number }[]) {
+  return contentWrite<QuizAttempt>(`${quizPath(courseId, moduleId, quizId)}/attempts`, 'POST', { submissionId, answers })
+}
+export function getQuizResults(courseId: number, moduleId: number, quizId: number, signal?: AbortSignal) {
+  return request<QuizAttempt[]>(`${quizPath(courseId, moduleId, quizId)}/attempts`, { signal })
+}
+export function deleteLearningItem(courseId: number, moduleId: number, itemId: number) {
+  return contentWrite<void>(`/api/courses/${courseId}/modules/${moduleId}/items/${itemId}`, 'DELETE')
 }
 
 export async function addStudent(id: number, email: string) {

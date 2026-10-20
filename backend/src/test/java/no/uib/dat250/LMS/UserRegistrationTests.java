@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -28,7 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = { "spring.config.import=", "POSTGRES_PASSWORD=test-password" })
+@SpringBootTest(properties = { "spring.config.import=", "POSTGRES_PASSWORD=test-password", "lms.demo.accounts.enabled=false" })
 @AutoConfigureMockMvc
 @Import(TestDatabaseConfiguration.class)
 class UserRegistrationTests {
@@ -99,10 +100,38 @@ class UserRegistrationTests {
                 Arguments.of(VALID_USER.replace("  Ada@Example.Test  ", "  "), "email"),
                 Arguments.of(VALID_USER.replace("  Ada@Example.Test  ", "a".repeat(245) + "@example.test"), "email"),
                 Arguments.of(VALID_USER.replace(PASSWORD, "short"), "password"),
+                Arguments.of(VALID_USER.replace(PASSWORD, "abcdef!"), "password"),
+                Arguments.of(VALID_USER.replace(PASSWORD, "abcdefgh"), "password"),
+                Arguments.of(VALID_USER.replace(PASSWORD, "abcdefg "), "password"),
+                Arguments.of(VALID_USER.replace(PASSWORD, "aaaaaa🌱"), "password"),
                 Arguments.of(VALID_USER.replace(PASSWORD, " ".repeat(20)), "password"),
                 Arguments.of(VALID_USER.replace(PASSWORD, "a".repeat(129)), "password"),
                 Arguments.of("{}", "email"),
                 Arguments.of("{\"name\":null,\"email\":null,\"password\":null}", "password"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"abcdefg!", "1234567?", "!!!!!!!!", "abcdefg🌱"})
+    void eightCharactersAndASpecialCharacterAreEnough(String password) throws Exception {
+        registerUser(VALID_USER.replace(PASSWORD, password));
+        login("ada@example.test", password);
+    }
+
+    @Test
+    void longPasswordsHaveNoAdditionalLengthRestriction() throws Exception {
+        String password = "a".repeat(256) + "!";
+        registerUser(VALID_USER.replace(PASSWORD, password));
+        login("ada@example.test", password);
+    }
+
+    @Test
+    void exampleEnrollmentIsRejectedAndRolledBackWhenExamplesAreDisabled() throws Exception {
+        mvc.perform(post("/api/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(VALID_USER.replace("\"name\":", "\"includeExamples\":true,\"name\":")))
+                .andExpect(status().isBadRequest());
+        assertThat(users.count()).isZero();
+        mvc.perform(get("/api/demo-access")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(false)).andExpect(jsonPath("$.password").isEmpty());
     }
 
     @Test
