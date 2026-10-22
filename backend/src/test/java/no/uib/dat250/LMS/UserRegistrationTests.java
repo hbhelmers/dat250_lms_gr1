@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = { "spring.config.import=", "POSTGRES_PASSWORD=test-password", "lms.demo.accounts.enabled=false" })
+@SpringBootTest(properties = { "spring.config.import=", "POSTGRES_PASSWORD=test-password", "lms.demo.accounts.enabled=false", "lms.messaging.enabled=false" })
 @AutoConfigureMockMvc
 @Import(TestDatabaseConfiguration.class)
 class UserRegistrationTests {

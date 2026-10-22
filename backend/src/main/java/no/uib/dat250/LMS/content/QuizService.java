@@ -13,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 import no.uib.dat250.LMS.course.CourseAccess;
 import no.uib.dat250.LMS.course.CourseEnrollment;
 import no.uib.dat250.LMS.course.CourseRole;
+import no.uib.dat250.LMS.events.DomainEvents;
+import no.uib.dat250.LMS.events.LearningEvent;
 
 @Service
 @Transactional(readOnly = true)
@@ -23,11 +25,12 @@ public class QuizService {
     private final QuizRepository quizzes;
     private final QuizAttemptRepository attempts;
     private final Clock clock;
+    private final DomainEvents events;
 
     public QuizService(CourseAccess access, CourseModuleRepository modules, ContentItemRepository items,
-            QuizRepository quizzes, QuizAttemptRepository attempts, Clock clock) {
+            QuizRepository quizzes, QuizAttemptRepository attempts, Clock clock, DomainEvents events) {
         this.access = access; this.modules = modules; this.items = items;
-        this.quizzes = quizzes; this.attempts = attempts; this.clock = clock;
+        this.quizzes = quizzes; this.attempts = attempts; this.clock = clock; this.events = events;
     }
 
     @Transactional
@@ -81,6 +84,8 @@ public class QuizService {
         int count = attempts.countByQuizIdAndUserId(quizId, member.getUser().getId());
         if (count >= quiz.getMaxAttempts()) throw error(HttpStatus.CONFLICT, "Du har brukt opp forsøkene dine.");
         var attempt = attempts.saveAndFlush(new QuizAttempt(quiz, member.getUser(), count + 1, request.submissionId(), now, selected));
+        events.record(LearningEvent.Type.QUIZ_SUBMITTED, now, courseId, moduleId, quizId,
+                member.getUser().getId(), attempt.getId(), attempt.getAttemptNumber(), false);
         return QuizAttemptResponse.from(attempt, quiz.isResultsVisible(), false);
     }
 

@@ -14,6 +14,8 @@ import no.uib.dat250.LMS.course.CourseAccess;
 import no.uib.dat250.LMS.course.CourseEnrollment;
 import no.uib.dat250.LMS.course.CourseRole;
 import no.uib.dat250.LMS.storage.FileStorage;
+import no.uib.dat250.LMS.events.DomainEvents;
+import no.uib.dat250.LMS.events.LearningEvent;
 
 @Service @Transactional(readOnly = true)
 public class AssignmentService {
@@ -24,10 +26,11 @@ public class AssignmentService {
     private final AssignmentSubmissionRepository submissions;
     private final FileStorage storage;
     private final Clock clock;
+    private final DomainEvents events;
     public AssignmentService(CourseAccess access, CourseModuleRepository modules, ContentItemRepository items,
-            AssignmentRepository assignments, AssignmentSubmissionRepository submissions, FileStorage storage, Clock clock) {
+            AssignmentRepository assignments, AssignmentSubmissionRepository submissions, FileStorage storage, Clock clock, DomainEvents events) {
         this.access = access; this.modules = modules; this.items = items; this.assignments = assignments;
-        this.submissions = submissions; this.storage = storage; this.clock = clock;
+        this.submissions = submissions; this.storage = storage; this.clock = clock; this.events = events;
     }
 
     @Transactional
@@ -88,6 +91,8 @@ public class AssignmentService {
         var submission = submissions.saveAndFlush(new AssignmentSubmission(assignment, member.getUser(),
                 submissions.countByAssignmentIdAndUserId(assignmentId, member.getUser().getId()) + 1,
                 submissionId, now, late, key, file));
+        events.record(LearningEvent.Type.ASSIGNMENT_SUBMITTED, now, courseId, moduleId, assignmentId,
+                member.getUser().getId(), submission.getId(), submission.getVersion(), late);
         return SubmissionResponse.from(submission, false);
     }
 
@@ -97,7 +102,11 @@ public class AssignmentService {
         access.lockForTeacher(courseId, email);
         requireAssignment(courseId, moduleId, assignmentId);
         var submission = requireSubmission(assignmentId, submissionId);
+        boolean notify = request.published() && (!submission.isGradePublished() || submission.getGrade() != request.grade()
+                || !submission.getFeedback().equals(request.feedback()));
         submission.assess(request, clock.instant());
+        if (notify) events.record(LearningEvent.Type.GRADE_PUBLISHED, clock.instant(), courseId, moduleId, assignmentId,
+                submission.getUser().getId(), submissionId, submission.getVersion(), submission.isLate());
         return SubmissionResponse.from(submission, true);
     }
 

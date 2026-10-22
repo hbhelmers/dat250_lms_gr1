@@ -26,14 +26,15 @@ function movedIds(items: { id: number }[], id: number, direction: number) {
   return ids
 }
 
-export function CourseContent({ courseId, teacher, onSessionExpired, onWorkingChange }: {
+export function CourseContent({ courseId, teacher, initialSelection, onSessionExpired, onWorkingChange }: {
   courseId: number
   teacher: boolean
+  initialSelection?: Selection
   onSessionExpired: () => void
   onWorkingChange: (working: boolean) => void
 }) {
   const [modules, setModules] = useState<LearningModule[]>([])
-  const [selection, setSelection] = useState<Selection>({ moduleId: null, pageId: null })
+  const [selection, setSelection] = useState<Selection>(() => initialSelection ?? { moduleId: null, pageId: null })
   const [editor, setEditor] = useState<Editor | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)

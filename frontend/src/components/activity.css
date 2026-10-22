@@ -1,0 +1,23 @@
+.course-activity { padding: 12px 0 22px; }
+.activity-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.activity-toolbar h3 { margin: 8px 0 0; font-size: 26px; letter-spacing: -.6px; }
+.activity-description { margin: 20px 0 8px; line-height: 1.7; color: #6d7563; }
+.activity-list { list-style: none; padding: 0; margin: 28px 0 0; }
+.activity-list > li { display: flex; gap: 17px; padding: 22px 0; border-top: 1px solid #e5e8df; }
+.activity-icon { width: 43px; height: 43px; flex-shrink: 0; display: grid; place-items: center; border-radius: 13px; background: #f1f2eb; color: #6f7b5a; }
+.activity-icon.assessment { color: #526e36; background: #e8efdf; }
+.activity-entry { min-width: 0; width: 100%; }
+.activity-entry-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.activity-entry-heading strong { font-size: 14px; color: #65774d; }
+.activity-entry time { color: #858b7b; font-size: 12px; white-space: nowrap; }
+.activity-content-link { display: inline-flex; align-items: center; text-align: left; gap: 12px; background: none; border: 0; padding: 10px 0; color: #333e29; font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; overflow-wrap: anywhere; }
+.activity-content-link:hover { color: #657f48; text-decoration: underline; text-underline-offset: 4px; }
+.activity-content-link .icon { width: 17px; flex-shrink: 0; }
+.activity-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 12px; color: #7b8371; }
+.activity-meta small { display: block; margin-top: 3px; overflow-wrap: anywhere; }
+.activity-late { color: #98662a; background: #faf1df; border-radius: 5px; padding: 4px 7px; }
+.activity-empty { margin-top: 30px; padding: 45px 24px; text-align: center; background: #f8f9f4; border-radius: 14px; color: #7e8971; }
+.activity-empty > .icon { width: 32px; height: 32px; }
+.activity-empty h4 { margin-bottom: 8px; color: #4c5c3d; }
+.activity-empty p { font-size: 14px; line-height: 1.7; }
+@media (max-width: 600px) { .activity-entry-heading { align-items: flex-start; flex-direction: column; gap: 5px; } .activity-toolbar { align-items: flex-start; flex-direction: column; } .activity-list > li { gap: 12px; } }

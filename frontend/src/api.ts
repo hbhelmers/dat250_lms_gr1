@@ -9,6 +9,11 @@ export type StoredCourse = {
 }
 
 export type CourseMember = { userId: number; name: string; email: string; role: CourseRole }
+export type CourseActivity = {
+  id: string; type: 'QUIZ_SUBMITTED' | 'ASSIGNMENT_SUBMITTED' | 'GRADE_PUBLISHED'; occurredAt: string
+  moduleId: number; itemId: number; itemTitle: string; studentName: string | null; studentEmail: string | null
+  version: number; late: boolean
+}
 
 export type LearningItem = {
   id: number; moduleId: number; type: 'PAGE' | 'QUIZ' | 'ASSIGNMENT'; title: string; body: string; position: number
@@ -108,6 +113,10 @@ export function getCourse(id: number, signal?: AbortSignal) {
 
 export function getCourseMembers(id: number, signal?: AbortSignal) {
   return request<CourseMember[]>(`/api/courses/${id}/members`, { signal })
+}
+
+export function getCourseActivity(courseId: number, signal?: AbortSignal) {
+  return request<CourseActivity[]>(`/api/courses/${courseId}/activity`, { signal })
 }
 
 export function getModules(courseId: number, signal?: AbortSignal) {
