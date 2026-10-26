@@ -6,6 +6,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Entity
 @Table(name = "courses")
@@ -30,6 +32,13 @@ public class Course {
     @Column(length = 32)
     private String exampleTemplate;
 
+    @Enumerated(EnumType.STRING) @Column(length = 8)
+    private Institution institution;
+    @Column(length = 20) private String courseCode;
+    @Column(nullable = false) private boolean selfEnrollment;
+    @Column(length = 512) private String officialUrl;
+    @Column(length = 32, unique = true) private String catalogKey;
+
     protected Course() {
     }
 
@@ -44,6 +53,19 @@ public class Course {
     public String getDescription() { return description; }
     public String getSemester() { return semester; }
     public String getExampleTemplate() { return exampleTemplate; }
+    public Institution getInstitution() { return institution; }
+    public String getCourseCode() { return courseCode; }
+    public boolean isSelfEnrollment() { return selfEnrollment; }
+    public String getOfficialUrl() { return officialUrl; }
+    public String getCatalogKey() { return catalogKey; }
+
+    public void configureCatalog(Institution institution, String courseCode, boolean selfEnrollment) {
+        if (this.institution != institution || !java.util.Objects.equals(this.courseCode, courseCode)) officialUrl = null;
+        this.institution = institution; this.courseCode = courseCode; this.selfEnrollment = selfEnrollment;
+    }
+    public void markCatalogExample(String key, String officialUrl) {
+        this.catalogKey = key; this.officialUrl = officialUrl;
+    }
 
     public static Course example(String title, String description, String semester, String template) {
         var course = new Course(title, description, semester);

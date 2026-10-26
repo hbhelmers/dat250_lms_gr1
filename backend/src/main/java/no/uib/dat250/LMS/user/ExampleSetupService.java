@@ -123,6 +123,7 @@ public class ExampleSetupService {
 
     private Course exampleCourse(LmsUser teacher, String title, String description, String semester, String template) {
         var course = courses.save(Course.example(title, description, semester, template));
+        course.configureCatalog(Institution.HVL, template, false);
         enrollments.saveAndFlush(new CourseEnrollment(course, teacher, CourseRole.TEACHER));
         return course;
     }

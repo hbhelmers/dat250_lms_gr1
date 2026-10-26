@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, createCourse, updateCourse } from '../api'
-import type { StoredCourse } from '../api'
+import type { Institution, StoredCourse } from '../api'
 import { Icon } from './Icon'
 
 export function CreateCourseDialog({ course, onClose, onSaved, onSessionExpired }: {
@@ -12,6 +12,9 @@ export function CreateCourseDialog({ course, onClose, onSaved, onSessionExpired 
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [title, setTitle] = useState(course?.title ?? '')
   const [description, setDescription] = useState(course?.description ?? '')
+  const [institution, setInstitution] = useState<Institution>(course?.institution ?? 'HVL')
+  const [courseCode, setCourseCode] = useState(course?.courseCode ?? '')
+  const [selfEnrollment, setSelfEnrollment] = useState(course?.selfEnrollment ?? true)
   const [semester, setSemester] = useState(() => {
     if (course) return course.semester
     const today = new Date()
@@ -40,7 +43,7 @@ export function CreateCourseDialog({ course, onClose, onSaved, onSessionExpired 
         setError('')
         setFieldErrors({})
         try {
-          const input = { title, description, semester }
+          const input = { title, description, semester, institution, courseCode, selfEnrollment }
           onSaved(course ? await updateCourse(course.id, input) : await createCourse(input))
         } catch (failure) {
           if (failure instanceof ApiError) {
@@ -53,6 +56,16 @@ export function CreateCourseDialog({ course, onClose, onSaved, onSessionExpired 
         }
       }}>
         <p className="form-intro">{course ? 'Oppdater emnets tittel, semester og beskrivelse.' : 'Gi emnet en tittel, velg semester og skriv hva det handler om. Du blir lærer i emnet.'}</p>
+        <div className="course-catalog-fields">
+          <div className="form-field"><label htmlFor="course-institution">Institusjon</label>
+            <select id="course-institution" value={institution} onChange={(event) => setInstitution(event.target.value as Institution)} disabled={saving} required>
+              <option value="HVL">HVL – Høgskulen på Vestlandet</option><option value="UIB">UiB – Universitetet i Bergen</option>
+            </select></div>
+          <div className="form-field"><label htmlFor="course-code">Emnekode (valgfritt)</label>
+            <input id="course-code" placeholder="F.eks. DAT250 eller INF100" value={courseCode} maxLength={20} disabled={saving}
+              onChange={(event) => setCourseCode(event.target.value.toUpperCase())} aria-invalid={Boolean(fieldErrors.courseCode)} />
+            {fieldErrors.courseCode && <p className="field-error">{fieldErrors.courseCode}</p>}</div>
+        </div>
         <div className="form-field">
           <label htmlFor="course-title">Tittel</label>
           <input id="course-title" name="title" placeholder="F.eks. DAT250 – Programvareteknologi"
@@ -78,6 +91,8 @@ export function CreateCourseDialog({ course, onClose, onSaved, onSessionExpired 
             aria-describedby={fieldErrors.description ? 'course-description-error' : undefined} />
           {fieldErrors.description && <p className="field-error" id="course-description-error">{fieldErrors.description}</p>}
         </div>
+        <label className="publish-option"><input type="checkbox" checked={selfEnrollment} disabled={saving} onChange={(event) => setSelfEnrollment(event.target.checked)} />Åpent for påmelding</label>
+        <p className="field-hint">Åpne emner vises under valgt institusjon i emnekatalogen. Studentene kan melde seg på selv.</p>
         {error && <p className="api-feedback error" role="alert">{error}</p>}
         <div className="form-actions">
           <button type="button" className="secondary-button" disabled={saving}

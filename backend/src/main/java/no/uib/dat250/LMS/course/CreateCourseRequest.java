@@ -2,6 +2,8 @@ package no.uib.dat250.LMS.course;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
+import java.util.Locale;
 
 public record CreateCourseRequest(
         @NotBlank(message = "Skriv inn en tittel.")
@@ -14,5 +16,14 @@ public record CreateCourseRequest(
 
         @NotBlank(message = "Skriv inn et semester.")
         @Size(max = 50, message = "Semesteret kan ha maksimalt 50 tegn.")
-        String semester) {
+        String semester,
+        Institution institution,
+        @Pattern(regexp = "[A-Z][A-Z0-9-]{1,19}|", message = "Bruk en emnekode med 2–20 bokstaver og tall, for eksempel DAT250.") String courseCode,
+        Boolean selfEnrollment) {
+    public CreateCourseRequest {
+        courseCode = courseCode == null ? null : courseCode.strip().toUpperCase(Locale.ROOT);
+    }
+    public CreateCourseRequest(String title, String description, String semester) {
+        this(title, description, semester, null, null, null);
+    }
 }

@@ -15,7 +15,7 @@ export function AuthPanel({ onLoggedIn, onOpenDemo, error: externalError, onClea
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [preferredRole, setPreferredRole] = useState<CourseRole>('STUDENT')
-  const [includeExamples, setIncludeExamples] = useState(true)
+  const [includeExamples, setIncludeExamples] = useState(false)
   const [demoAccess, setDemoAccess] = useState<DemoAccess | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -111,12 +111,13 @@ export function AuthPanel({ onLoggedIn, onOpenDemo, error: externalError, onClea
             <label className={preferredRole === 'TEACHER' ? 'selected' : ''}><input type="radio" name="preferredRole" value="TEACHER"
               checked={preferredRole === 'TEACHER'} onChange={() => setPreferredRole('TEACHER')} /><span>Lærer</span></label>
           </div>
-          <p className="field-hint">Du kan ha ulike roller i ulike emner.</p>
+          <p className="field-hint">Lærere oppretter og administrerer emner. Studenter finner emner og melder seg på.</p>
         </fieldset>}
         {registering && demoAccess?.enabled && <div className="registration-examples">
           <label><input type="checkbox" checked={includeExamples} onChange={(event) => setIncludeExamples(event.target.checked)} disabled={busy} />
-            <span>Legg til eksempelfag</span></label>
-          <p>DAT250 og DAT100 med moduler, sider og quizer. Fjern haken for å starte med et tomt læringsrom.</p>
+            <span>{preferredRole === 'TEACHER' ? 'Legg til eksempelfag' : 'Meld meg på to HVL-eksempelemner'}</span></label>
+          <p>{preferredRole === 'TEACHER' ? 'DAT250 og DAT100 med moduler, sider og quizer. Velg dette for å starte med egne eksempelkopier.'
+            : 'Du kan velge HVL eller UiB og melde deg på fag etter innlogging. Dette valget melder deg direkte på DAT250 og DAT100 ved HVL.'}</p>
           {includeExamples && <p>{preferredRole === 'TEACHER' ? 'Du får egne kopier som du kan redigere.' : 'Du blir student i eksempellærerens fag.'}</p>}
         </div>}
         <div className="form-field">

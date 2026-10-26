@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import no.uib.dat250.LMS.course.Course;
 import no.uib.dat250.LMS.course.CourseEnrollmentRepository;
 import no.uib.dat250.LMS.course.CourseRepository;
+import no.uib.dat250.LMS.course.CourseRole;
 import no.uib.dat250.LMS.course.CourseService;
 import no.uib.dat250.LMS.course.CreateCourseRequest;
 import no.uib.dat250.LMS.course.LegacyCourseOwnership;
@@ -65,8 +66,9 @@ class CourseMembershipTests {
     void clearAndSeedUsers() {
         courses.deleteAll();
         users.deleteAll();
-        registration.register(new RegistrationRequest("Ada Lærer", TEACHER, PASSWORD));
-        registration.register(new RegistrationRequest("Bo Student", STUDENT, PASSWORD));
+        registration.register(new RegistrationRequest("Ada Lærer", TEACHER, PASSWORD, CourseRole.TEACHER, false));
+        // Teacher profiles can still participate as students in another teacher's course.
+        registration.register(new RegistrationRequest("Bo Student", STUDENT, PASSWORD, CourseRole.TEACHER, false));
         registration.register(new RegistrationRequest("Cam Utenfor", OUTSIDER, PASSWORD));
     }
 

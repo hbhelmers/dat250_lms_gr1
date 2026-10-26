@@ -84,7 +84,7 @@ class MessagingTests {
         admin.initialize();
         admin.purgeQueue(MessagingConfiguration.ACTIVITY_QUEUE, false);
         admin.purgeQueue(MessagingConfiguration.DEAD_QUEUE, false);
-        for (var email : List.of(TEACHER, STUDENT, OTHER)) users.save(new LmsUser(email, email, "unused"));
+        for (var email : List.of(TEACHER, STUDENT, OTHER)) users.save(new LmsUser(email, email, "unused", email.equals(TEACHER) ? CourseRole.TEACHER : CourseRole.STUDENT));
         courseId = courseService.create(new CreateCourseRequest("DAT250", "", "Høst 2026"), TEACHER).id();
         courseService.addStudent(courseId, new AddStudentRequest(STUDENT), TEACHER);
         courseService.addStudent(courseId, new AddStudentRequest(OTHER), TEACHER);

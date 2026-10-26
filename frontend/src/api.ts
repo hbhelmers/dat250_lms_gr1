@@ -1,4 +1,5 @@
 export type CourseRole = 'TEACHER' | 'STUDENT'
+export type Institution = 'HVL' | 'UIB'
 
 export type StoredCourse = {
   id: number
@@ -6,7 +7,13 @@ export type StoredCourse = {
   description: string | null
   semester: string
   role: CourseRole
+  institution: Institution | null
+  courseCode: string | null
+  selfEnrollment: boolean
+  officialUrl: string | null
 }
+
+export type CatalogCourse = Omit<StoredCourse, 'role' | 'selfEnrollment'> & { membershipRole: CourseRole | null }
 
 export type CourseMember = { userId: number; name: string; email: string; role: CourseRole }
 export type CourseActivity = {
@@ -44,6 +51,9 @@ export type CreateCourseInput = {
   title: string
   description: string
   semester: string
+  institution: Institution
+  courseCode: string
+  selfEnrollment: boolean
 }
 
 export type Session = { id: number; name: string; email: string; preferredRole: CourseRole }
@@ -105,6 +115,14 @@ export function getDemoAccess(signal?: AbortSignal) {
 
 export function getCourses(signal?: AbortSignal) {
   return request<StoredCourse[]>('/api/courses', { signal })
+}
+
+export function getCourseCatalog(institution: Institution, signal?: AbortSignal) {
+  return request<CatalogCourse[]>(`/api/courses/catalog?institution=${institution}`, { signal })
+}
+
+export function enrollInCourse(id: number) {
+  return contentWrite<StoredCourse>(`/api/courses/${id}/enroll`, 'POST')
 }
 
 export function getCourse(id: number, signal?: AbortSignal) {

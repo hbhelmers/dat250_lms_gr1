@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/courses")
@@ -34,6 +35,16 @@ public class CourseController {
     @GetMapping("/{id}")
     public CourseResponse findById(@PathVariable Long id, Principal principal) {
         return service.findById(id, principal.getName());
+    }
+
+    @GetMapping("/catalog")
+    public List<CatalogCourseResponse> catalog(@RequestParam Institution institution, Principal principal) {
+        return service.catalog(institution, principal.getName());
+    }
+
+    @PostMapping("/{id}/enroll")
+    public CourseResponse enroll(@PathVariable Long id, Principal principal) {
+        return service.enroll(id, principal.getName());
     }
 
     @PostMapping

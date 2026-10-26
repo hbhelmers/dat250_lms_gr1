@@ -55,7 +55,7 @@ class LmsApplicationTests {
     void clearTestDatabase() {
         repository.deleteAll();
         users.deleteAll();
-        registration.register(new RegistrationRequest("Testlærer", "teacher@example.test", "test-login-password"));
+        registration.register(new RegistrationRequest("Testlærer", "teacher@example.test", "test-login-password", no.uib.dat250.LMS.course.CourseRole.TEACHER, false));
     }
 
     @Test

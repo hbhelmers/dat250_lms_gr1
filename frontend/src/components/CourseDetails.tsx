@@ -57,7 +57,7 @@ export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
       onClose={onClose} onCancel={(event) => { if (blocked) event.preventDefault() }}
       aria-labelledby="course-details-heading">
       <div className="dialog-header">
-        <div><span className="eyebrow">{details.semester}</span><h2 id="course-details-heading">{details.title}</h2></div>
+        <div><span className="eyebrow">{details.institution ? `${details.institution === 'UIB' ? 'UiB' : details.institution} · ` : ''}{details.semester}</span><h2 id="course-details-heading">{details.title}</h2></div>
         <button className="icon-button" aria-label="Lukk emnet" disabled={blocked}
           onClick={() => dialogRef.current?.close()}><Icon name="close" /></button>
       </div>

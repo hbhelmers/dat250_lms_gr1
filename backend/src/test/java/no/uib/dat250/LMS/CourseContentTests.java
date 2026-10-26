@@ -65,7 +65,7 @@ class CourseContentTests {
         courses.deleteAll();
         users.deleteAll();
         // HTTP authentication itself is covered by the registration/session tests.
-        for (var email : List.of(TEACHER, STUDENT, OUTSIDER)) users.save(new LmsUser(email, email, "unused"));
+        for (var email : List.of(TEACHER, STUDENT, OUTSIDER)) users.save(new LmsUser(email, email, "unused", email.equals(TEACHER) ? CourseRole.TEACHER : CourseRole.STUDENT));
         courseId = courseService.create(new CreateCourseRequest("DAT250", "Innholdstest", "Høst 2026"), TEACHER).id();
         courseService.addStudent(courseId, new AddStudentRequest(STUDENT), TEACHER);
     }

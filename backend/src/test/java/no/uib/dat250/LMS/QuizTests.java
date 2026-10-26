@@ -53,7 +53,7 @@ class QuizTests {
     @BeforeEach
     void seed() {
         courses.deleteAll(); users.deleteAll();
-        for (var email : List.of(TEACHER, STUDENT, OTHER)) users.save(new LmsUser(email, email, "unused"));
+        for (var email : List.of(TEACHER, STUDENT, OTHER)) users.save(new LmsUser(email, email, "unused", email.equals(TEACHER) ? CourseRole.TEACHER : CourseRole.STUDENT));
         courseId = courseService.create(new CreateCourseRequest("DAT250", "", "Høst 2026"), TEACHER).id();
         courseService.addStudent(courseId, new AddStudentRequest(STUDENT), TEACHER);
         moduleId = content.createModule(courseId, new ModuleRequest("Uke 1"), TEACHER).id();

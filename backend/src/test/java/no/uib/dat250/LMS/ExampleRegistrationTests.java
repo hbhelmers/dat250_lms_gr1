@@ -25,7 +25,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = {"spring.config.import=", "POSTGRES_PASSWORD=test-password", "LMS_LEGACY_TEACHER_EMAIL=", "lms.demo.accounts.enabled=true", "lms.messaging.enabled=false"})
+@SpringBootTest(properties = {"spring.config.import=", "POSTGRES_PASSWORD=test-password", "LMS_LEGACY_TEACHER_EMAIL=", "lms.demo.accounts.enabled=true", "lms.messaging.enabled=false", "lms.catalog.seed.enabled=false"})
 @AutoConfigureMockMvc
 @Import(TestDatabaseConfiguration.class)
 class ExampleRegistrationTests {
