@@ -4,6 +4,7 @@ import type { CourseMember, StoredCourse } from '../api'
 import { Icon } from './Icon'
 import { CourseContent } from './CourseContent'
 import { CourseActivity } from './CourseActivity'
+import { CourseGroups } from './CourseGroups'
 
 export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
   course: StoredCourse
@@ -17,7 +18,7 @@ export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [section, setSection] = useState<'content' | 'about' | 'members' | 'activity'>('content')
+  const [section, setSection] = useState<'content' | 'about' | 'members' | 'activity' | 'groups'>('content')
   const [contentTarget, setContentTarget] = useState<{ moduleId: number; pageId: number }>()
   const [contentWorking, setContentWorking] = useState(false)
   const [email, setEmail] = useState('')
@@ -69,6 +70,7 @@ export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
               <nav className="course-sections" aria-label="Emnevisning">
                 <button aria-pressed={section === 'content'} disabled={blocked} onClick={() => { setContentTarget(undefined); setSection('content') }}>Innhold</button>
                 <button aria-pressed={section === 'activity'} disabled={blocked} onClick={() => setSection('activity')}>Aktivitet</button>
+                <button aria-pressed={section === 'groups'} disabled={blocked} onClick={() => setSection('groups')}>Grupper</button>
                 <button aria-pressed={section === 'about'} disabled={blocked} onClick={() => setSection('about')}>Om emnet</button>
                 {teacher && <button aria-pressed={section === 'members'} disabled={blocked} onClick={() => setSection('members')}>Deltakere</button>}
               </nav>
@@ -78,6 +80,7 @@ export function CourseDetails({ course, onClose, onEdit, onSessionExpired }: {
               initialSelection={contentTarget} onSessionExpired={onSessionExpired} onWorkingChange={setContentWorking} />}
             {section === 'activity' && <CourseActivity courseId={details.id} teacher={teacher} onSessionExpired={onSessionExpired}
               onOpen={(moduleId, itemId) => { setContentTarget({ moduleId, pageId: itemId }); setSection('content') }} />}
+            {section === 'groups' && <CourseGroups courseId={details.id} onSessionExpired={onSessionExpired} />}
             {section === 'about' && <>
               <p className="stored-description">{details.description || 'Ingen beskrivelse lagt til.'}</p>
               {teacher && <button className="secondary-button" onClick={() => onEdit(details)}>Rediger emne</button>}

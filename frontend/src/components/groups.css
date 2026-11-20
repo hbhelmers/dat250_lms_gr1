@@ -1,0 +1,40 @@
+.course-groups { padding: 12px 0 22px; }
+.course-groups > h3 { margin: 8px 0 0; font-size: 26px; letter-spacing: -.6px; }
+.groups-description { margin: 20px 0 18px; line-height: 1.7; color: #6d7563; }
+.groups-subheading { margin: 30px 0 12px; font-size: 16px; color: #4c5c3d; }
+.groups-summary { margin: 22px 0 10px; font-size: 13px; color: #7b8371; }
+.group-list, .seeker-list, .member-chips { list-style: none; padding: 0; margin: 0; }
+.group-list { display: grid; gap: 12px; }
+.group-card { padding: 18px 20px; background: #fff; border: 1px solid #e5e8df; border-radius: 12px; }
+.group-card + .group-card { margin-top: 12px; }
+.group-list .group-card + .group-card { margin-top: 0; }
+.group-create h4 { margin: 0 0 12px; color: #4c5c3d; }
+.my-group { border-color: #c5d6b3; background: #f8fbf4; }
+.group-invitation { border-color: #ecd2a8; background: #fdf8ef; }
+.group-invitation p { margin: 0 0 12px; line-height: 1.6; }
+.group-heading { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.group-heading h4 { margin: 0; font-size: 17px; color: #333e29; overflow-wrap: anywhere; }
+.group-count { font-size: 12px; color: #7b8371; }
+.group-badge { font-size: 11px; padding: 3px 8px; border-radius: 5px; background: #f1f2eb; color: #6f7b5a; white-space: nowrap; }
+.group-badge.open { background: #e8efdf; color: #526e36; }
+.member-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.member-chips li { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: #f1f4ec; font-size: 13px; color: #42503a; }
+.member-chips .icon-button { width: 22px; height: 22px; padding: 0; }
+.member-chips .icon-button .icon { width: 13px; height: 13px; }
+.group-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
+.group-danger { color: #a74d30; }
+.add-member { display: flex; gap: 8px; flex-wrap: wrap; }
+.add-member select { max-width: 100%; padding: 8px 10px; border: 1px solid #dfe6d8; border-radius: 6px; background: #fcfdfb; font: inherit; font-size: 13px; color: inherit; }
+.group-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 16px; }
+.group-form .form-field { margin-bottom: 0; flex: 1 1 200px; }
+.group-form .form-field input { margin-top: 8px; }
+.group-form .group-capacity { flex: 0 0 90px; }
+.group-form .group-actions { margin-top: 8px; width: 100%; }
+.seeking-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #42503a; cursor: pointer; margin-bottom: 12px; }
+.seeking-card .form-field { margin-bottom: 8px; }
+.seeking-card textarea { min-height: 64px; }
+.seeker-list li { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid #e5e8df; }
+.seeker-list li > div { min-width: 0; }
+.seeker-list small { margin-left: 8px; color: #858b7b; }
+.seeker-list p { margin: 5px 0 0; line-height: 1.6; color: #5c6651; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .seeker-list li { flex-direction: column; align-items: flex-start; } .group-card { padding: 16px; } }

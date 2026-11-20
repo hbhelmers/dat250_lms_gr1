@@ -47,6 +47,16 @@ export type AssignmentSubmission = {
 }
 export type Assignment = { content: LearningItem; deadline: string | null; acceptLate: boolean; submissions: AssignmentSubmission[] }
 
+export type GroupPerson = { userId: number; name: string; email: string | null }
+export type CourseGroup = { id: number; name: string; capacity: number; open: boolean; members: GroupPerson[] }
+export type GroupSeeker = { userId: number; name: string; email: string | null; note: string; since: string; invited: boolean }
+export type GroupInvitation = { id: number; groupId: number; groupName: string; invitedBy: string }
+export type GroupOverview = {
+  teacher: boolean; myUserId: number; myGroupId: number | null; seeking: boolean; myNote: string | null
+  groups: CourseGroup[]; seekers: GroupSeeker[]; invitations: GroupInvitation[]; ungroupedStudents: GroupPerson[]
+}
+export type GroupInput = { name: string; capacity: number; open: boolean }
+
 export type CreateCourseInput = {
   title: string
   description: string
@@ -135,6 +145,39 @@ export function getCourseMembers(id: number, signal?: AbortSignal) {
 
 export function getCourseActivity(courseId: number, signal?: AbortSignal) {
   return request<CourseActivity[]>(`/api/courses/${courseId}/activity`, { signal })
+}
+
+function groupsPath(courseId: number, rest = '') {
+  return `/api/courses/${courseId}/groups${rest}`
+}
+export function getGroups(courseId: number, signal?: AbortSignal) {
+  return request<GroupOverview>(groupsPath(courseId), { signal })
+}
+export function saveGroup(courseId: number, input: GroupInput, groupId?: number) {
+  return contentWrite<GroupOverview>(groupsPath(courseId, groupId === undefined ? '' : `/${groupId}`), groupId === undefined ? 'POST' : 'PUT', input)
+}
+export function deleteGroup(courseId: number, groupId: number) {
+  return contentWrite<GroupOverview>(groupsPath(courseId, `/${groupId}`), 'DELETE')
+}
+export function addGroupMember(courseId: number, groupId: number, userId: number) {
+  return contentWrite<GroupOverview>(groupsPath(courseId, `/${groupId}/members`), 'POST', { userId })
+}
+export function removeGroupMember(courseId: number, groupId: number, userId: number) {
+  return contentWrite<GroupOverview>(groupsPath(courseId, `/${groupId}/members/${userId}`), 'DELETE')
+}
+export function joinGroup(courseId: number, groupId: number) {
+  return contentWrite<GroupOverview>(groupsPath(courseId, `/${groupId}/join`), 'POST')
+}
+export function setSeekingGroup(courseId: number, note: string | null) {
+  return note === null ? contentWrite<GroupOverview>(groupsPath(courseId, '/seeking'), 'DELETE')
+    : contentWrite<GroupOverview>(groupsPath(courseId, '/seeking'), 'PUT', { note })
+}
+export function inviteToGroup(courseId: number, groupId: number, userId: number) {
+  return contentWrite<GroupOverview>(groupsPath(courseId, `/${groupId}/invitations`), 'POST', { userId })
+}
+export function answerGroupInvitation(courseId: number, invitationId: number, accept: boolean) {
+  return accept ? contentWrite<GroupOverview>(groupsPath(courseId, `/invitations/${invitationId}/accept`), 'POST')
+    : contentWrite<GroupOverview>(groupsPath(courseId, `/invitations/${invitationId}`), 'DELETE')
 }
 
 export function getModules(courseId: number, signal?: AbortSignal) {
