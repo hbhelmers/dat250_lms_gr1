@@ -1,93 +1,138 @@
-# DAT250_LMS_gr1
+# Lær – DAT250 LMS (gruppe 1)
 
+Lær er et læringsstyringssystem (LMS) utviklet som semesterprosjekt i DAT250 ved HVL/UiB høsten 2026.
 
+## Beskrivelse
+Lær lar lærere opprette emner med moduler, undervisningssider, quizer og filinnleveringer. Studenter finner emner i en katalog for HVL og UiB og melder seg på. Deretter tar de quizer, leverer oppgaver og får vurderinger og tilbakemeldinger. Hvert emne har en aktivitetsoversikt som oppdateres gjennom RabbitMQ.
 
-## Getting started
+Som egen funksjon («novel feature») har Lær **Finn gruppe**. Læreren oppretter grupper i emnet, og studentene kan bli med i åpne grupper. De kan også krysse av for at de *ser etter gruppe* og skrive et kort notat som de andre ser, slik at studenter i grupper med ledig plass kan invitere dem.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+### Funksjoner
+- **Brukere og innlogging**
+  - Registrering med student- eller lærerprofil og passordkrav.
+  - Innlogging med sesjon og CSRF-beskyttelse.
+  - Ferdige demokontoer.
+- **Emner og medlemskap**
+  - Lærere oppretter og redigerer emner.
+  - Emnekatalog for HVL og UiB med selvpåmelding.
+  - Roller per emne.
+- **Moduler og sider**
+  - Markdown-sider med utkast og publisering.
+  - Synlighet kan begrenses til et tidsrom.
+  - Innhold kan sorteres.
+- **Quiz**
+  - Flervalg med automatisk retting, poeng og hint.
+  - Begrenset antall forsøk og frist.
+  - Læreren styrer når resultatene vises.
+- **Filinnleveringer**
+  - Levering av PDF og Word, med versjoner og regler for sen levering.
+  - Karakter og tilbakemelding som utkast eller publisert.
+- **Aktivitet**
+  - Hendelser for quizforsøk, innleveringer og vurderinger.
+  - Leveres via en transaksjonell outbox og RabbitMQ.
+- **Grupper og Finn gruppe**
+  - Læreren oppretter grupper og fordeler studenter.
+  - Studentene kan bli med i åpne grupper, si fra at de ser etter gruppe, invitere og godta invitasjoner.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### Arkitektur
+| Del | Teknologi |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite (`frontend/`) |
+| Backend | Java 21, Spring Boot 4.1, Spring Web MVC, Spring Data JPA, Spring Security (`backend/`) |
+| Database | PostgreSQL 17, med skjema styrt av Flyway (`backend/src/main/resources/db/migration`) |
+| Fillagring | SeaweedFS via S3-protokollen (AWS SDK for Java) |
+| Meldinger | RabbitMQ / Spring AMQP |
+| Tester | JUnit, Spring Boot Test, MockMvc, Testcontainers |
 
-## Add your files
+Backend er delt i pakkene `course` (emner, medlemskap, katalog), `content` (moduler, sider, quiz, oppgaver), `group` (grupper og Finn gruppe), `events` (outbox og aktivitet), `storage` (S3), `user` (registrering og demodata) og `security`.
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Skjermbilder
+![img.png](docs/images/emneoversikt.png)
+![img_1.png](docs/images/emneinnhold.png)
+![img_2.png](docs/images/gruppefunksjon.png)
 
+## Installasjon
+### Krav
+- Java 21 eller nyere
+- Node.js 20 eller nyere med npm
+- Docker Desktop (eller Docker Engine med Compose)
+
+### Oppsett
+1. Klon repoet og lag en `.env`-fil i rotmappen:
+   ```powershell
+   copy .env.example .env
+   ```
+   Sett et passord i `.env`, for eksempel `POSTGRES_PASSWORD=lmspassword`.
+2. Start PostgreSQL, SeaweedFS og RabbitMQ:
+   ```powershell
+   docker compose up -d
+   ```
+3. Start backend. 
+   ```powershell
+   cd backend
+   .\mvnw.cmd spring-boot:run      # macOS/Linux: ./mvnw spring-boot:run
+   ```
+   Flyway oppretter og oppdaterer databasetabellene automatisk ved oppstart.
+4. Start frontend i et nytt terminalvindu. Den kjører på http://localhost:5173:
+   ```powershell
+   cd frontend
+   npm ci
+   npm run dev
+   ```
+
+Stopp tjenestene med `docker compose stop`. Kommandoen `docker compose down -v` sletter også alle data.
+
+## Bruk
+Åpne http://localhost:5173. I lokal utvikling opprettes disse demokontoene automatisk, og de vises også på innloggingssiden:
+
+| Rolle | E-post | Passord |
+| --- | --- | --- |
+| Lærer | `laerer@lms.test` | `demo123!` |
+| Student | `student@lms.test` | `demo123!` |
+
+Demolæreren har eksempelemner der demostudenten allerede er påmeldt. Du kan også registrere nye kontoer og melde deg på emner via **Finn emner**.
+
+Slik prøver du Finn gruppe:
+1. Logg inn som lærer, åpne et emne og velg fanen **Grupper**.
+2. Opprett en åpen og en lukket gruppe.
+3. Logg inn som student, gjerne i et privat vindu, og kryss av for **Jeg ser etter gruppe**.
+4. Med en annen student kan du bli med i den åpne gruppen og invitere studenten som leter.
+
+Nyttige adresser lokalt:
+- RabbitMQ-administrasjon: http://localhost:15672
+- SeaweedFS S3: http://localhost:8333
+
+## Tester
+```powershell
+cd backend
+.\mvnw.cmd verify               # integrasjonstester; krever at Docker kjører (Testcontainers)
+
+cd frontend
+npm run lint
+npm run build
 ```
-cd existing_repo
-git remote add origin https://git.app.uib.no/hvl-dat-250/26h/semester-project/group-1/dat250_lms_gr1.git
-git branch -M main
-git push -uf origin main
-```
+Testene starter sin egen PostgreSQL-container og påvirker ikke den lokale databasen.
 
-## Integrate with your tools
-
-* [Set up project integrations](https://git.app.uib.no/hvl-dat-250/26h/semester-project/group-1/dat250_lms_gr1/-/settings/integrations)
-
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
 
 ## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Gjenstående arbeid:
+- **Gruppeinnlevering**: én innlevering på vegne av gruppen, og felles karakter og tilbakemelding.
+- **Kodeoppgaver**: egen innholdstype med startkode, leveringsmåte, frist og vurdering.
+- **Flere spørsmålstyper i quiz**, for eksempel utfylling, kobling og sortering.
+- **Individuell lærertilbakemelding** på quizforsøk.
+- **Fremdrift**: lesestatus og fullføring, og eventuelt avhengigheter mellom moduler.
+- **Multimedia**, for eksempel innebygd video.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## Forfattere
+DAT250, gruppe 1, høsten 2026:
+- Adrian Nordbø
+- Viktor Bouwer Knudsen
+- Magnus Grønås
+- Henrik Helmers
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## Lisens
+Prosjektet er laget som en del av et studieemne og har ingen åpen kildekode-lisens.
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Prosjektstatus
+Prosjektet er under aktiv utvikling gjennom semesteret.
