@@ -18,19 +18,42 @@ backend:
       alias: docker
       command: ["--tls=false"]
   variables:
-    DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
-    TESTCONTAINERS_HOST_OVERRIDE: docker
     MAVEN_OPTS: -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository
   cache:
     key: maven
     paths: [.m2/repository]
   script:
+    # Testcontainers needs the dind service. It is reachable as "docker" on the Docker executor
+    # and as "localhost" on the Kubernetes executor; use whichever answers.
+    - |
+      for attempt in $(seq 1 30); do
+        for host in docker localhost; do
+          if timeout 2 bash -c "</dev/tcp/$host/2375" 2>/dev/null; then
+            export DOCKER_HOST="tcp://$host:2375" TESTCONTAINERS_HOST_OVERRIDE="$host"; break 2
+          fi
+        done
+        sleep 2
+      done
+      if [ -z "$DOCKER_HOST" ]; then
+        echo "ERROR: Docker-in-Docker is not reachable on docker:2375 or localhost:2375."
+        echo "The runner probably does not allow privileged mode, which docker:dind needs."
+        exit 1
+      fi
+      echo "Using Docker at $DOCKER_HOST (CI_RUNNER_DESCRIPTION=$CI_RUNNER_DESCRIPTION)"
     - cd backend
     - chmod +x mvnw
-    - ./mvnw -B verify
+    # Full Maven output goes to an artifact; the job log only shows the summary and the first root cause.
+    - |
+      if ! ./mvnw -B verify > maven.log 2>&1; then
+        grep -m1 -A15 "Caused by" maven.log || true
+        grep -E "Tests run:|BUILD|ERROR\]   " maven.log | tail -40
+        exit 1
+      fi
+      grep -E "Tests run:.*Fail|BUILD" maven.log | tail -5
   artifacts:
     when: always
+    paths: [backend/maven.log]
     reports:
       junit: backend/target/surefire-reports/TEST-*.xml
 
