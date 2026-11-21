@@ -1,138 +1,152 @@
-# Lær – DAT250 LMS (gruppe 1)
+# Lær – DAT250 LMS (group 1)
 
-Lær er et learning management system (LMS) utviklet som semesterprosjekt i DAT250 ved HVL høsten 2026.
+Lær is a learning management system (LMS) developed as the semester project in DAT250 at HVL, autumn 2026.
 
-## Beskrivelse
-Lær lar lærere opprette emner med moduler, undervisningssider, quizer og filinnleveringer. Studenter finner emner i en katalog for HVL og UiB og melder seg på. Deretter tar de quizer, leverer oppgaver og får vurderinger og tilbakemeldinger. Hvert emne har en aktivitetsoversikt som oppdateres gjennom RabbitMQ.
+## Description
+Lær lets teachers create courses with modules, teaching pages, quizzes and file assignments. Students find courses in a catalogue for HVL and UiB and enrol. They then take quizzes, hand in assignments and receive grades and feedback. Each course has an activity feed that is updated through RabbitMQ.
 
-Som egen funksjon («novel feature») har Lær **Finn gruppe**. Læreren oppretter grupper i emnet, og studentene kan bli med i åpne grupper. De kan også krysse av for at de *ser etter gruppe* og skrive et kort notat som de andre ser, slik at studenter i grupper med ledig plass kan invitere dem.
+As its own feature ("novel feature"), Lær has **Find a group** (*Finn gruppe*). The teacher creates groups in the course, and students can join open groups. They can also tick that they are *looking for a group* and write a short note that the others can see, so that students in groups with free spots can invite them.
 
-### Funksjoner
-- **Brukere og innlogging**
-  - Registrering med student- eller lærerprofil og passordkrav.
-  - Innlogging med sesjon og CSRF-beskyttelse.
-  - Ferdige demokontoer.
-- **Emner og medlemskap**
-  - Lærere oppretter og redigerer emner.
-  - Emnekatalog for HVL og UiB med selvpåmelding.
-  - Roller per emne.
-- **Moduler og sider**
-  - Markdown-sider med utkast og publisering.
-  - Synlighet kan begrenses til et tidsrom.
-  - Innhold kan sorteres.
+### Features
+- **Users and login**
+  - Registration with a student or teacher profile and password requirements.
+  - Login with session and CSRF protection.
+  - Ready-made demo accounts.
+- **Courses and membership**
+  - Teachers create and edit courses.
+  - Course catalogue for HVL and UiB with self-enrolment.
+  - Roles per course.
+- **Modules and pages**
+  - Markdown pages with drafts and publishing.
+  - Visibility can be limited to a time window.
+  - Content can be reordered.
 - **Quiz**
-  - Flervalg med automatisk retting, poeng og hint.
-  - Begrenset antall forsøk og frist.
-  - Læreren styrer når resultatene vises.
-- **Filinnleveringer**
-  - Levering av PDF og Word, med versjoner og regler for sen levering.
-  - Karakter og tilbakemelding som utkast eller publisert.
-- **Aktivitet**
-  - Hendelser for quizforsøk, innleveringer og vurderinger.
-  - Leveres via en transaksjonell outbox og RabbitMQ.
-- **Grupper og Finn gruppe**
-  - Læreren oppretter grupper og fordeler studenter.
-  - Studentene kan bli med i åpne grupper, si fra at de ser etter gruppe, invitere og godta invitasjoner.
+  - Multiple choice with automatic grading, points and hints.
+  - Limited number of attempts and a deadline.
+  - The teacher controls when results are shown.
+- **File assignments**
+  - Hand-in of PDF and Word, or a `.zip` of code for coding exercises, with versions and rules for late submission.
+  - Optional link to a starter-code repository, and group assignments with one shared submission per group.
+  - Grade and feedback as draft or published.
+- **Activity**
+  - Events for quiz attempts, submissions and grades.
+  - Delivered through a transactional outbox and RabbitMQ.
+- **Groups and Find a group**
+  - The teacher creates groups and assigns students.
+  - Students can join open groups, say that they are looking for a group, invite others and accept invitations.
 
-### Arkitektur
-| Del | Teknologi |
+### Architecture
+| Part | Technology |
 | --- | --- |
 | Frontend | React 19, TypeScript, Vite (`frontend/`) |
 | Backend | Java 21, Spring Boot 4.1, Spring Web MVC, Spring Data JPA, Spring Security (`backend/`) |
-| Database | PostgreSQL 17, med skjema styrt av Flyway (`backend/src/main/resources/db/migration`) |
-| Fillagring | SeaweedFS via S3-protokollen (AWS SDK for Java) |
-| Meldinger | RabbitMQ / Spring AMQP |
-| Tester | JUnit, Spring Boot Test, MockMvc, Testcontainers |
+| Database | PostgreSQL 17, with the schema managed by Flyway (`backend/src/main/resources/db/migration`) |
+| File storage | SeaweedFS via the S3 protocol (AWS SDK for Java) |
+| Messaging | RabbitMQ / Spring AMQP |
+| Tests | JUnit, Spring Boot Test, MockMvc, Testcontainers |
 
-Backend er delt i pakkene `course` (emner, medlemskap, katalog), `content` (moduler, sider, quiz, oppgaver), `group` (grupper og Finn gruppe), `events` (outbox og aktivitet), `storage` (S3), `user` (registrering og demodata) og `security`.
+The backend is split into the packages `course` (courses, membership, catalogue), `content` (modules, pages, quizzes, assignments), `group` (groups and Find a group), `events` (outbox and activity), `storage` (S3), `user` (registration and demo data) and `security`.
 
-## Skjermbilder
+## Screenshots
 ![img.png](docs/images/emneoversikt.png)
 ![img_1.png](docs/images/emneinnhold.png)
 ![img_2.png](docs/images/gruppefunksjon.png)
 
-## Installasjon
-### Krav
-- Java 21 eller nyere
-- Node.js 20 eller nyere med npm
-- Docker Desktop (eller Docker Engine med Compose)
+## Installation
+### Requirements
+- Java 21 or newer
+- Node.js 20 or newer with npm
+- Docker Desktop (or Docker Engine with Compose)
 
-### Oppsett
-1. Klon repoet og lag en `.env`-fil i rotmappen:
+### Setup
+1. Clone the repository and create a `.env` file in the root folder:
    ```powershell
    copy .env.example .env
    ```
-   Sett et passord i `.env`, for eksempel `POSTGRES_PASSWORD=lmspassword`.
-2. Start PostgreSQL, SeaweedFS og RabbitMQ:
+   Set a password in `.env`, for example `POSTGRES_PASSWORD=lmspassword`.
+2. Start PostgreSQL, SeaweedFS and RabbitMQ:
    ```powershell
    docker compose up -d
    ```
-3. Start backend. 
+3. Start the backend.
    ```powershell
    cd backend
    .\mvnw.cmd spring-boot:run      # macOS/Linux: ./mvnw spring-boot:run
    ```
-   Flyway oppretter og oppdaterer databasetabellene automatisk ved oppstart.
-4. Start frontend i et nytt terminalvindu. Den kjører på http://localhost:5173:
+   Flyway creates and updates the database tables automatically on start-up.
+4. Start the frontend in a new terminal window. It runs on http://localhost:5173:
    ```powershell
    cd frontend
    npm ci
    npm run dev
    ```
 
-Stopp tjenestene med `docker compose stop`. Kommandoen `docker compose down -v` sletter også alle data.
+Stop the services with `docker compose stop`. The command `docker compose down -v` also deletes all data.
 
-## Bruk
-Åpne http://localhost:5173. I lokal utvikling opprettes disse demokontoene automatisk, og de vises også på innloggingssiden:
+### Running everything in Docker
+Instead of steps 3 and 4, the backend and frontend can also run as containers. Build and start the whole system:
+```powershell
+docker compose --profile app up -d --build
+```
+The app is then available at http://localhost:8080 (nginx serves the frontend and forwards `/api` to the backend).
 
-| Rolle | E-post | Passord |
+CI builds images for the backend and frontend on every push to `main` and publishes them to the project's GitLab container registry. To deploy those images without building:
+1. Uncomment `D250_REG` in `.env` (see `.env.example`).
+2. Log in to the registry with a personal access token:
+   ```bash
+   cat ~/.gl_reg_token.txt | docker login git.app.uib.no:4567 -u <gitlab-username> --password-stdin
+   ```
+3. Pull and start:
+   ```powershell
+   docker compose --profile app pull
+   docker compose --profile app up -d
+   ```
+
+## Usage
+Open http://localhost:5173. In local development these demo accounts are created automatically, and they are also shown on the login page:
+
+| Role | E-mail | Password |
 | --- | --- | --- |
-| Lærer | `laerer@lms.test` | `demo123!` |
+| Teacher | `laerer@lms.test` | `demo123!` |
 | Student | `student@lms.test` | `demo123!` |
 
-Demolæreren har eksempelemner der demostudenten allerede er påmeldt. Du kan også registrere nye kontoer og melde deg på emner via **Finn emner**.
+The demo teacher has example courses where the demo student is already enrolled. You can also register new accounts and enrol in courses through **Finn emner** (Find courses).
 
-Slik prøver du Finn gruppe:
-1. Logg inn som lærer, åpne et emne og velg fanen **Grupper**.
-2. Opprett en åpen og en lukket gruppe.
-3. Logg inn som student, gjerne i et privat vindu, og kryss av for **Jeg ser etter gruppe**.
-4. Med en annen student kan du bli med i den åpne gruppen og invitere studenten som leter.
+How to try Find a group:
+1. Log in as a teacher, open a course and select the **Grupper** (Groups) tab.
+2. Create one open and one closed group.
+3. Log in as a student, preferably in a private window, and tick **Jeg ser etter gruppe** (I'm looking for a group).
+4. With another student, you can join the open group and invite the student who is looking.
 
-Nyttige adresser lokalt:
-- RabbitMQ-administrasjon: http://localhost:15672
+Useful local addresses:
+- RabbitMQ management: http://localhost:15672
 - SeaweedFS S3: http://localhost:8333
 
-## Tester
+## Tests
 ```powershell
 cd backend
-.\mvnw.cmd verify               # integrasjonstester; krever at Docker kjører (Testcontainers)
+.\mvnw.cmd verify               # integration tests; requires Docker to be running (Testcontainers)
 
 cd frontend
 npm run lint
 npm run build
 ```
-Testene starter sin egen PostgreSQL-container og påvirker ikke den lokale databasen.
+Locally, the tests start their own PostgreSQL, SeaweedFS and RabbitMQ containers with Testcontainers and do not affect the local database. The GitLab runner cannot start containers, so in CI the tests run against PostgreSQL, SeaweedFS and RabbitMQ started as GitLab services instead (see `.gitlab-ci.yml`).
 
 
-## Roadmap
-Gjenstående arbeid:
-- **Gruppeinnlevering**: én innlevering på vegne av gruppen, og felles karakter og tilbakemelding.
-- **Kodeoppgaver**: egen innholdstype med startkode, leveringsmåte, frist og vurdering.
-- **Flere spørsmålstyper i quiz**, for eksempel utfylling, kobling og sortering.
-- **Individuell lærertilbakemelding** på quizforsøk.
-- **Fremdrift**: lesestatus og fullføring, og eventuelt avhengigheter mellom moduler.
-- **Multimedia**, for eksempel innebygd video.
+## Documentation
+Architecture, technology stack, development process, new technology, novel feature, known limitations and AI reflection: [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md).
 
 
-## Forfattere
-DAT250, gruppe 1, høsten 2026:
+## Authors
+DAT250, group 1, autumn 2026:
 - Adrian Nordbø
 - Viktor Bouwer Knudsen
 - Magnus Grønås
 - Henrik Helmers
 
-## Lisens
-Prosjektet er laget som en del av et studieemne og har ingen åpen kildekode-lisens.
+## License
+The project was made as part of a university course and has no open-source license.
 
-## Prosjektstatus
-Prosjektet er under aktiv utvikling gjennom semesteret.
+## Project status
+The project is under active development throughout the semester.
