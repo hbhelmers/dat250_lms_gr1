@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,14 +49,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import({TestDatabaseConfiguration.class, CourseContentTests.FixedTime.class})
 class MessagingTests {
-    static final GenericContainer<?> BROKER = new GenericContainer<>("rabbitmq:4.3.6-management")
+    // CI has no Docker; there RabbitMQ runs as a GitLab service at LMS_TEST_RABBITMQ_HOST with the same credentials.
+    static final String EXTERNAL_BROKER = System.getenv("LMS_TEST_RABBITMQ_HOST");
+    static final GenericContainer<?> BROKER = EXTERNAL_BROKER != null ? null : new GenericContainer<>("rabbitmq:4.3.6-management")
             .withEnv("RABBITMQ_DEFAULT_USER", "messaging-test").withEnv("RABBITMQ_DEFAULT_PASS", "messaging-test-password")
             .withEnv("RABBITMQ_DEFAULT_VHOST", "lms").withExposedPorts(5672)
             .waitingFor(Wait.forLogMessage(".*Server startup complete.*\\n", 1));
-    static { BROKER.start(); }
+    static { if (BROKER != null) BROKER.start(); }
     @DynamicPropertySource static void rabbitProperties(DynamicPropertyRegistry properties) {
-        properties.add("spring.rabbitmq.host", BROKER::getHost);
-        properties.add("spring.rabbitmq.port", () -> BROKER.getMappedPort(5672));
+        properties.add("spring.rabbitmq.host", () -> EXTERNAL_BROKER != null ? EXTERNAL_BROKER : BROKER.getHost());
+        properties.add("spring.rabbitmq.port", () -> EXTERNAL_BROKER != null
+                ? Integer.parseInt(System.getenv().getOrDefault("LMS_TEST_RABBITMQ_PORT", "5672")) : BROKER.getMappedPort(5672));
         properties.add("spring.rabbitmq.username", () -> "messaging-test");
         properties.add("spring.rabbitmq.password", () -> "messaging-test-password");
     }
@@ -196,7 +200,9 @@ class MessagingTests {
         assertThat(pending()).isZero();
     }
 
-    @Test void brokerOutageDoesNotBlockSubmissionAndPendingEventIsDeliveredAfterRestart() throws Exception {
+    @Test @DisabledIfEnvironmentVariable(named = "LMS_TEST_RABBITMQ_HOST", matches = ".+",
+            disabledReason = "Needs to stop and start the broker, which only works with the Testcontainers broker.")
+    void brokerOutageDoesNotBlockSubmissionAndPendingEventIsDeliveredAfterRestart() throws Exception {
         long id = quiz();
         assertThat(BROKER.execInContainer("rabbitmqctl", "stop_app").getExitCode()).isZero();
         try {

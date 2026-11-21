@@ -50,6 +50,8 @@ services:
     restart: unless-stopped
 
   backend:
+    # Pulled from the GitLab registry when D250_REG is set (see .env.example), otherwise built locally.
+    image: ${D250_REG:-dat250-lms}/backend:latest
     build: ./backend
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lmsdb
@@ -67,6 +69,7 @@ services:
     profiles: [app]
 
   frontend:
+    image: ${D250_REG:-dat250-lms}/frontend:latest
     build: ./frontend
     ports:
       - "8080:80"

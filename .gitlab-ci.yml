@@ -9,42 +9,58 @@ stages:
 - build
 - test
 - secret-detection
+- release
 
 backend:
   stage: build
   image: eclipse-temurin:21-jdk
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  # The course runner cannot start containers (no privileged mode, no Docker socket), so Testcontainers
+  # cannot run here. GitLab starts the services instead and the tests connect to them via LMS_TEST_* variables.
+  # Locally the tests still use Testcontainers.
   services:
-    - name: docker:27-dind
-      command: ["--tls=false"]
+    - name: postgres:17-alpine
+      alias: postgres
+      variables:
+        POSTGRES_DB: lmsdb
+        POSTGRES_USER: lmsuser
+        POSTGRES_PASSWORD: test-password
+    - name: chrislusf/seaweedfs:4.48
+      alias: object-storage
+      command: ["mini", "-dir=/data", "-volume.max=10", "-master.volumeSizeLimitMB=128", "-master.telemetry=false",
+                "-webdav=false", "-admin.ui=false", "-s3.port.iceberg=0", "-s3.port.lance=0"]
+      variables:
+        AWS_ACCESS_KEY_ID: assignment-test
+        AWS_SECRET_ACCESS_KEY: assignment-test-secret
+        S3_BUCKET: lms-submissions
+    - name: rabbitmq:4.3.6-management
+      alias: rabbitmq
+      variables:
+        RABBITMQ_DEFAULT_USER: messaging-test
+        RABBITMQ_DEFAULT_PASS: messaging-test-password
+        RABBITMQ_DEFAULT_VHOST: lms
   variables:
-    DOCKER_TLS_CERTDIR: ""
     MAVEN_OPTS: -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository
+    LMS_TEST_POSTGRES_URL: jdbc:postgresql://postgres:5432/lmsdb
+    LMS_TEST_POSTGRES_USER: lmsuser
+    LMS_TEST_S3_ENDPOINT: http://object-storage:8333
+    LMS_TEST_RABBITMQ_HOST: rabbitmq
   cache:
     key: maven
     paths: [.m2/repository]
   script:
-    # Testcontainers needs the dind service. It is reachable as "docker" on the Docker executor
-    # and as "localhost" on the Kubernetes executor; use whichever answers.
+    # Wait until all three services accept connections (up to ~2 minutes).
     - |
-      if [ -S /var/run/docker.sock ]; then
-        echo "Using the host Docker socket /var/run/docker.sock"
-      else
-      for attempt in $(seq 1 30); do
-        for host in docker localhost; do
-          if timeout 2 bash -c "</dev/tcp/$host/2375" 2>/dev/null; then
-            export DOCKER_HOST="tcp://$host:2375" TESTCONTAINERS_HOST_OVERRIDE="$host"; break 2
-          fi
+      for target in postgres:5432 object-storage:8333 rabbitmq:5672; do
+        for attempt in $(seq 1 60); do
+          timeout 2 bash -c "</dev/tcp/${target%:*}/${target#*:}" 2>/dev/null && break
+          [ "$attempt" = 60 ] && { echo "ERROR: service $target did not start"; exit 1; }
+          sleep 2
         done
-        sleep 2
+        echo "$target is up"
       done
-      if [ -z "$DOCKER_HOST" ]; then
-        echo "ERROR: Docker-in-Docker is not reachable on docker:2375 or localhost:2375."
-        echo "The runner probably does not allow privileged mode, which docker:dind needs,"
-        echo "and it does not mount the host socket /var/run/docker.sock either."
-        exit 1
-      fi
-      echo "Using Docker at $DOCKER_HOST (CI_RUNNER_DESCRIPTION=$CI_RUNNER_DESCRIPTION)"
-      fi
     - cd backend
     - chmod +x mvnw
     # Full Maven output goes to an artifact; the job log only shows the summary and the first root cause.
@@ -58,12 +74,16 @@ backend:
   artifacts:
     when: always
     paths: [backend/maven.log]
+    expire_in: 1 week
     reports:
       junit: backend/target/surefire-reports/TEST-*.xml
 
 frontend:
   stage: build
   image: node:22
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   cache:
     key: npm
     paths: [frontend/.npm]
@@ -72,6 +92,29 @@ frontend:
     - npm ci --cache .npm --prefer-offline
     - npm run lint
     - npm run build
+
+# Builds the backend and frontend images and pushes them to the project's container registry on every
+# push to main. Kaniko builds images without a Docker daemon or privileged mode, which this runner lacks.
+# Deploy on a host with: docker compose --profile app pull && docker compose --profile app up -d
+release-images:
+  stage: release
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+    entrypoint: [""]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  parallel:
+    matrix:
+      - COMPONENT: [backend, frontend]
+  script:
+    - mkdir -p /kaniko/.docker
+    - AUTH=$(printf "%s:%s" "$CI_REGISTRY_USER" "$CI_REGISTRY_PASSWORD" | base64 | tr -d '\n')
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$AUTH\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+        --context "$CI_PROJECT_DIR/$COMPONENT"
+        --dockerfile "$CI_PROJECT_DIR/$COMPONENT/Dockerfile"
+        --destination "$CI_REGISTRY_IMAGE/$COMPONENT:latest"
+        --destination "$CI_REGISTRY_IMAGE/$COMPONENT:$CI_COMMIT_SHORT_SHA"
 sast:
   stage: test
 include:

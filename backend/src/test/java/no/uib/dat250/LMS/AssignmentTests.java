@@ -51,15 +51,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import({TestDatabaseConfiguration.class, CourseContentTests.FixedTime.class})
 class AssignmentTests {
-    static final GenericContainer<?> OBJECTS = new GenericContainer<>("chrislusf/seaweedfs:4.48")
+    // CI has no Docker; there SeaweedFS runs as a GitLab service at LMS_TEST_S3_ENDPOINT with the same credentials.
+    static final String EXTERNAL_S3 = System.getenv("LMS_TEST_S3_ENDPOINT");
+    static final GenericContainer<?> OBJECTS = EXTERNAL_S3 != null ? null : new GenericContainer<>("chrislusf/seaweedfs:4.48")
             .withCommand("mini", "-dir=/data", "-volume.max=10", "-master.volumeSizeLimitMB=128", "-master.telemetry=false",
                     "-webdav=false", "-admin.ui=false", "-s3.port.iceberg=0", "-s3.port.lance=0")
             .withEnv("AWS_ACCESS_KEY_ID", "assignment-test").withEnv("AWS_SECRET_ACCESS_KEY", "assignment-test-secret")
             .withEnv("S3_BUCKET", "lms-submissions").withExposedPorts(8333)
             .waitingFor(Wait.forLogMessage(".*All enabled components are running and ready to use:.*\\n", 1));
-    static { OBJECTS.start(); }
+    static { if (OBJECTS != null) OBJECTS.start(); }
+    static String s3Endpoint() {
+        return EXTERNAL_S3 != null ? EXTERNAL_S3 : "http://" + OBJECTS.getHost() + ":" + OBJECTS.getMappedPort(8333);
+    }
     @DynamicPropertySource static void storageProperties(DynamicPropertyRegistry registry) {
-        registry.add("lms.storage.endpoint", () -> "http://" + OBJECTS.getHost() + ":" + OBJECTS.getMappedPort(8333));
+        registry.add("lms.storage.endpoint", AssignmentTests::s3Endpoint);
         registry.add("lms.storage.access-key", () -> "assignment-test");
         registry.add("lms.storage.secret-key", () -> "assignment-test-secret");
     }
@@ -115,8 +120,7 @@ class AssignmentTests {
         assertThat(storage.get(key)).isEqualTo(PDF);
         assertThat(key).doesNotContain("besvarelse.pdf");
         try (var client = HttpClient.newHttpClient()) {
-            var response = client.send(HttpRequest.newBuilder(URI.create("http://" + OBJECTS.getHost() + ":" + OBJECTS.getMappedPort(8333)
-                    + "/lms-submissions/" + key)).GET().build(), HttpResponse.BodyHandlers.discarding());
+            var response = client.send(HttpRequest.newBuilder(URI.create(s3Endpoint() + "/lms-submissions/" + key)).GET().build(), HttpResponse.BodyHandlers.discarding());
             assertThat(response.statusCode()).isEqualTo(403);
         }
     }
