@@ -19,11 +19,12 @@ public class S3FileStorage implements FileStorage {
     private final String bucket;
 
     public S3FileStorage(@Value("${lms.storage.endpoint}") String endpoint,
+            @Value("${lms.storage.region:eu-west-1}") String region,
             @Value("${lms.storage.bucket}") String bucket,
             @Value("${lms.storage.access-key}") String accessKey,
             @Value("${lms.storage.secret-key}") String secretKey) {
         this.bucket = bucket;
-        client = S3Client.builder().endpointOverride(URI.create(endpoint)).region(Region.US_EAST_1)
+        client = S3Client.builder().endpointOverride(URI.create(endpoint)).region(Region.of(region))
                 .forcePathStyle(true).credentialsProvider(() -> AwsBasicCredentials.create(accessKey, secretKey))
                 .overrideConfiguration(config -> config.apiCallTimeout(Duration.ofSeconds(20))
                         .apiCallAttemptTimeout(Duration.ofSeconds(8))).build();
