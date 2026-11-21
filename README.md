@@ -1,6 +1,6 @@
 # Lær – DAT250 LMS (gruppe 1)
 
-Lær er et læringsstyringssystem (LMS) utviklet som semesterprosjekt i DAT250 ved HVL/UiB høsten 2026.
+Lær er et learning management system (LMS) utviklet som semesterprosjekt i DAT250 ved HVL høsten 2026.
 
 ## Beskrivelse
 Lær lar lærere opprette emner med moduler, undervisningssider, quizer og filinnleveringer. Studenter finner emner i en katalog for HVL og UiB og melder seg på. Deretter tar de quizer, leverer oppgaver og får vurderinger og tilbakemeldinger. Hvert emne har en aktivitetsoversikt som oppdateres gjennom RabbitMQ.
