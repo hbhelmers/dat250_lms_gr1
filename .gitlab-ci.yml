@@ -15,7 +15,6 @@ backend:
   image: eclipse-temurin:21-jdk
   services:
     - name: docker:27-dind
-      alias: docker
       command: ["--tls=false"]
   variables:
     DOCKER_TLS_CERTDIR: ""
@@ -27,6 +26,9 @@ backend:
     # Testcontainers needs the dind service. It is reachable as "docker" on the Docker executor
     # and as "localhost" on the Kubernetes executor; use whichever answers.
     - |
+      if [ -S /var/run/docker.sock ]; then
+        echo "Using the host Docker socket /var/run/docker.sock"
+      else
       for attempt in $(seq 1 30); do
         for host in docker localhost; do
           if timeout 2 bash -c "</dev/tcp/$host/2375" 2>/dev/null; then
@@ -37,10 +39,12 @@ backend:
       done
       if [ -z "$DOCKER_HOST" ]; then
         echo "ERROR: Docker-in-Docker is not reachable on docker:2375 or localhost:2375."
-        echo "The runner probably does not allow privileged mode, which docker:dind needs."
+        echo "The runner probably does not allow privileged mode, which docker:dind needs,"
+        echo "and it does not mount the host socket /var/run/docker.sock either."
         exit 1
       fi
       echo "Using Docker at $DOCKER_HOST (CI_RUNNER_DESCRIPTION=$CI_RUNNER_DESCRIPTION)"
+      fi
     - cd backend
     - chmod +x mvnw
     # Full Maven output goes to an artifact; the job log only shows the summary and the first root cause.
