@@ -95,11 +95,14 @@ export function AssignmentPanel({ courseId, moduleId, assignmentId, teacher, onS
     {notice && <p className="api-feedback success" role="status">{notice}</p>}
     {!assignment ? !error && <p role="status">Henter oppgave …</p> : <>
       <h3 className="quiz-heading">{assignment.content.title}</h3>
-      <div className="quiz-facts"><span>Individuell innlevering</span><span>PDF / DOCX · maks 10 MB</span>
+      <div className="quiz-facts"><span>{assignment.groupWork ? `Gruppeinnlevering${assignment.groupName ? ` · ${assignment.groupName}` : ''}` : 'Individuell innlevering'}</span><span>PDF / DOCX / ZIP · maks 10 MB</span>
         <span>{assignment.deadline ? `Frist: ${dateTime(assignment.deadline)}` : 'Ingen innleveringsfrist'}</span></div>
       <LessonBody body={assignment.content.body} />
+      {assignment.starterRepoUrl && <div className="assessment-feedback"><strong>Startkode</strong>
+        <p><code>git clone {assignment.starterRepoUrl}</code></p></div>}
+      {!teacher && assignment.groupWork && !assignment.groupName && <p className="api-feedback">Dette er en gruppeoppgave. Bli med i en gruppe under fanen «Grupper» før du leverer.</p>}
       {assignment.acceptLate && <p className="field-hint">Levering etter fristen er tillatt og merkes som sen.</p>}
-      {!teacher && <section className="assignment-upload" aria-labelledby="upload-heading"><h4 id="upload-heading">Din innlevering</h4>
+      {!teacher && <section className="assignment-upload" aria-labelledby="upload-heading"><h4 id="upload-heading">{assignment.groupWork ? 'Gruppens innlevering' : 'Din innlevering'}</h4>
         {closed ? <><p className="api-feedback">Innleveringsfristen er passert. Du kan fortsatt lese og laste ned egne innleveringer.</p>
           {file && <button type="button" className="text-button" disabled={busy} onClick={() => { setFile(null); submissionId.current = null }}>Fjern valgt fil</button>}</>
           : assignment.submissions.length > 0 && !uploadOpen ? <><p className="field-hint">Oppgaven er levert. Du kan levere en ny versjon frem til fristen.</p>
@@ -117,8 +120,8 @@ export function AssignmentPanel({ courseId, moduleId, assignmentId, teacher, onS
             setNotice(`Versjon ${saved.version} er levert${saved.late ? ' etter fristen' : ''}.`)
           } catch (failure) { reportError(failure) } finally { setBusy(false) }
         }}>
-          <div className="form-field"><label htmlFor="submission-file">Velg PDF eller Word-dokument</label>
-            <input ref={fileInput} id="submission-file" type="file" accept=".pdf,.docx" required disabled={busy} onChange={(event) => {
+          <div className="form-field"><label htmlFor="submission-file">Velg PDF, Word-dokument eller ZIP</label>
+            <input ref={fileInput} id="submission-file" type="file" accept=".pdf,.docx,.zip" required disabled={busy} onChange={(event) => {
               setFile(event.target.files?.[0] ?? null); submissionId.current = null; setError(''); setNotice('')
             }} /></div>
           <p className="field-hint">{assignment.submissions.length ? 'En ny levering lagres som en ny versjon. Tidligere versjoner og vurderinger beholdes.' : 'Vurderingen vises her når læreren publiserer den.'}</p>
@@ -136,7 +139,7 @@ export function AssignmentPanel({ courseId, moduleId, assignmentId, teacher, onS
         {assignment.submissions.length === 0 && <p className="field-hint">{teacher ? 'Ingen studenter har levert ennå.' : 'Du har ikke levert denne oppgaven ennå.'}</p>}
         {assignment.submissions.map((submission) => <article className="submission-card" key={submission.id}>
           <div className="submission-heading"><div><strong>{teacher ? submission.studentName : `Versjon ${submission.version}`}</strong>
-            {teacher && <small>{submission.studentEmail} · versjon {submission.version}{latestByStudent.get(submission.studentId) === submission.version ? ' · nyeste' : ' · tidligere versjon'}</small>}
+            {teacher && <small>{submission.groupName ? `${submission.groupName} · ` : ''}{submission.studentEmail} · versjon {submission.version}{latestByStudent.get(submission.studentId) === submission.version ? ' · nyeste' : ' · tidligere versjon'}</small>}
             <small>{dateTime(submission.submittedAt)} · {(submission.fileSize / 1024).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} kB</small></div>
             <span className={`assessment-badge ${submission.gradePublished ? 'published' : ''}`}>{submission.gradePublished ? `Karakter: ${gradeLabel(submission.grade!)}` : teacher && submission.grade ? `Utkast: ${gradeLabel(submission.grade)}` : 'Venter på vurdering'}</span></div>
           {submission.late && <p className="late-submission">Levert etter fristen</p>}

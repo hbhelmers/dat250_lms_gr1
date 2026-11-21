@@ -17,7 +17,8 @@ export function AssignmentEditor({ assignment, onSave, onCancel, onSessionExpire
     setSaving(true); setError('')
     try {
       await onSave({ title: value('title'), body: value('body'), published: fields.has('published'),
-        visibleFrom: date('visibleFrom'), visibleUntil: date('visibleUntil'), deadline: date('deadline'), acceptLate: fields.has('acceptLate') })
+        visibleFrom: date('visibleFrom'), visibleUntil: date('visibleUntil'), deadline: date('deadline'), acceptLate: fields.has('acceptLate'),
+        groupWork: fields.has('groupWork'), starterRepoUrl: value('starterRepoUrl').trim() || null })
     } catch (failure) {
       if (failure instanceof ApiError && failure.status === 401) { onSessionExpired(); return }
       setError(failure instanceof ApiError && Object.keys(failure.fieldErrors).length
@@ -29,11 +30,17 @@ export function AssignmentEditor({ assignment, onSave, onCancel, onSessionExpire
       <input id="assignment-title" name="title" defaultValue={assignment?.content.title ?? ''} required maxLength={255} disabled={saving} autoFocus /></div>
     <div className="form-field"><label htmlFor="assignment-body">Oppgavebeskrivelse</label>
       <textarea id="assignment-body" name="body" defaultValue={assignment?.content.body ?? ''} required maxLength={100_000} rows={8} disabled={saving} />
-      <span className="field-hint">Du kan bruke Markdown. Studentene leverer én PDF eller DOCX på opptil 10 MB per versjon.</span></div>
+      <span className="field-hint">Du kan bruke Markdown. Studentene leverer én PDF, DOCX eller ZIP (kode) på opptil 10 MB per versjon.</span></div>
     <div className="form-field"><label htmlFor="assignment-deadline">Innleveringsfrist (lokal tid)</label>
       <input id="assignment-deadline" name="deadline" type="datetime-local" defaultValue={localDateTime(assignment?.deadline)} disabled={saving} /></div>
     <label className="publish-option"><input type="checkbox" name="acceptLate" defaultChecked={assignment?.acceptLate ?? false} disabled={saving} />Tillat levering etter fristen</label>
     <p className="field-hint">Sene innleveringer merkes tydelig. Tidligere versjoner beholdes ved ny levering.</p>
+    <div className="form-field"><label htmlFor="assignment-repo">Startkode (Git-lenke, valgfritt)</label>
+      <input id="assignment-repo" name="starterRepoUrl" type="url" placeholder="https://git.app.uib.no/…" maxLength={500}
+        defaultValue={assignment?.starterRepoUrl ?? ''} disabled={saving} />
+      <span className="field-hint">For kodeoppgaver: studentene kloner repoet og leverer koden som .zip.</span></div>
+    <label className="publish-option"><input type="checkbox" name="groupWork" defaultChecked={assignment?.groupWork ?? false} disabled={saving} />Gruppeoppgave</label>
+    <p className="field-hint">Gruppen leverer én felles innlevering, og vurderingen gjelder alle medlemmene.</p>
     <label className="publish-option"><input type="checkbox" name="published" defaultChecked={assignment?.content.published ?? false} disabled={saving} />Publisert</label>
     <div className="visibility-fields">
       <div className="form-field"><label htmlFor="assignment-from">Synlig fra (lokal tid)</label>

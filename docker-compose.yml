@@ -49,6 +49,32 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  backend:
+    build: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lmsdb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      LMS_STORAGE_ENDPOINT: http://object-storage:8333
+      LMS_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      postgres:
+        condition: service_started
+      object-storage:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: [app]
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    profiles: [app]
+
 volumes:
   postgres_data:
   object_data:

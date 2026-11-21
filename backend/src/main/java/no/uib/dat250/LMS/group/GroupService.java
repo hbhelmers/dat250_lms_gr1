@@ -44,6 +44,19 @@ public class GroupService {
         this.clock = clock;
     }
 
+    /** The student's current group in the course, if any. Used for group submissions. */
+    public java.util.Optional<GroupRef> groupOf(Long courseId, Long userId) {
+        return memberships.findByCourseIdAndUserId(courseId, userId)
+                .map(m -> new GroupRef(m.getGroup().getId(), m.getGroup().getName()));
+    }
+
+    public java.util.Map<Long, String> groupNames(Long courseId) {
+        return groups.findByCourseIdOrderByNameAscIdAsc(courseId).stream()
+                .collect(Collectors.toMap(CourseGroup::getId, CourseGroup::getName));
+    }
+
+    public record GroupRef(Long id, String name) {}
+
     public GroupOverview overview(Long courseId, String email) {
         return overview(access.requireMember(courseId, email));
     }

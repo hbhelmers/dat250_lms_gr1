@@ -25,7 +25,9 @@ record SubmissionFile(String filename, String mediaType, byte[] bytes, String sh
             if (lower.endsWith(".pdf") && bytes.length >= 5
                     && new String(bytes, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-")) type = "application/pdf";
             else if (lower.endsWith(".docx") && isWordDocument(bytes)) type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            else throw error(HttpStatus.BAD_REQUEST, "Last opp en PDF eller et Word-dokument (.docx). Filinnholdet må samsvare med filtypen.");
+            else if (lower.endsWith(".zip") && bytes.length >= 4 && bytes[0] == 'P' && bytes[1] == 'K' && bytes[2] == 3 && bytes[3] == 4)
+                type = "application/zip"; // source code for coding exercises
+            else throw error(HttpStatus.BAD_REQUEST, "Last opp en PDF, et Word-dokument (.docx) eller en .zip med kode. Filinnholdet må samsvare med filtypen.");
             return new SubmissionFile(filename, type, bytes, HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
         } catch (IOException failure) { throw error(HttpStatus.BAD_REQUEST, "Kunne ikke lese filen. Velg den på nytt."); }
         catch (NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }

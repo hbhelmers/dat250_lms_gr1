@@ -39,13 +39,16 @@ export type Quiz = { content: LearningItem; maxAttempts: number; deadline: strin
 
 export type AssignmentGrade = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'PASSED' | 'FAILED'
 export type GradeInput = { grade: AssignmentGrade; feedback: string; published: boolean }
-export type AssignmentInput = PageInput & { deadline: string | null; acceptLate: boolean }
+export type AssignmentInput = PageInput & { deadline: string | null; acceptLate: boolean; groupWork: boolean; starterRepoUrl: string | null }
 export type AssignmentSubmission = {
   id: number; version: number; submittedAt: string; late: boolean; filename: string; fileSize: number
-  studentId: number | null; studentName: string | null; studentEmail: string | null
+  studentId: number | null; studentName: string | null; studentEmail: string | null; groupName: string | null
   grade: AssignmentGrade | null; feedback: string | null; gradePublished: boolean; gradedAt: string | null
 }
-export type Assignment = { content: LearningItem; deadline: string | null; acceptLate: boolean; submissions: AssignmentSubmission[] }
+export type Assignment = {
+  content: LearningItem; deadline: string | null; acceptLate: boolean; groupWork: boolean
+  starterRepoUrl: string | null; groupName: string | null; submissions: AssignmentSubmission[]
+}
 
 export type GroupPerson = { userId: number; name: string; email: string | null }
 export type CourseGroup = { id: number; name: string; capacity: number; open: boolean; members: GroupPerson[] }

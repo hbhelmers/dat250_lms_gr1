@@ -16,6 +16,7 @@ import no.uib.dat250.LMS.course.CourseRole;
 import no.uib.dat250.LMS.storage.FileStorage;
 import no.uib.dat250.LMS.events.DomainEvents;
 import no.uib.dat250.LMS.events.LearningEvent;
+import no.uib.dat250.LMS.group.GroupService;
 
 @Service @Transactional(readOnly = true)
 public class AssignmentService {
@@ -27,8 +28,11 @@ public class AssignmentService {
     private final FileStorage storage;
     private final Clock clock;
     private final DomainEvents events;
+    private final GroupService groups;
     public AssignmentService(CourseAccess access, CourseModuleRepository modules, ContentItemRepository items,
-            AssignmentRepository assignments, AssignmentSubmissionRepository submissions, FileStorage storage, Clock clock, DomainEvents events) {
+            AssignmentRepository assignments, AssignmentSubmissionRepository submissions, FileStorage storage, Clock clock,
+            DomainEvents events, GroupService groups) {
+        this.groups = groups;
         this.access = access; this.modules = modules; this.items = items; this.assignments = assignments;
         this.submissions = submissions; this.storage = storage; this.clock = clock; this.events = events;
     }
@@ -67,6 +71,9 @@ public class AssignmentService {
         var assignment = requireAssignment(courseId, moduleId, assignmentId);
         requireVisible(assignment, member);
         var file = SubmissionFile.read(upload);
+        Long groupId = null;
+        if (assignment.isGroupWork()) groupId = groups.groupOf(courseId, member.getUser().getId())
+                .orElseThrow(() -> error(HttpStatus.CONFLICT, "Dette er en gruppeoppgave. Bli med i en gruppe før du leverer.")).id();
         var existing = submissions.findByAssignmentIdAndUserIdAndSubmissionId(assignmentId, member.getUser().getId(), submissionId);
         if (existing.isPresent()) {
             var previous = existing.get();
@@ -89,8 +96,9 @@ public class AssignmentService {
         });
         storage.put(key, file.bytes(), file.mediaType());
         var submission = submissions.saveAndFlush(new AssignmentSubmission(assignment, member.getUser(),
-                submissions.countByAssignmentIdAndUserId(assignmentId, member.getUser().getId()) + 1,
-                submissionId, now, late, key, file));
+                (groupId != null ? submissions.countByAssignmentIdAndGroupId(assignmentId, groupId)
+                        : submissions.countByAssignmentIdAndUserId(assignmentId, member.getUser().getId())) + 1,
+                submissionId, groupId, now, late, key, file));
         events.record(LearningEvent.Type.ASSIGNMENT_SUBMITTED, now, courseId, moduleId, assignmentId,
                 member.getUser().getId(), submission.getId(), submission.getVersion(), late);
         return SubmissionResponse.from(submission, false);
@@ -115,16 +123,24 @@ public class AssignmentService {
         var assignment = requireAssignment(courseId, moduleId, assignmentId);
         requireVisible(assignment, member);
         var submission = requireSubmission(assignmentId, submissionId);
-        if (member.getRole() != CourseRole.TEACHER && !submission.getUser().getId().equals(member.getUser().getId())) throw missing();
+        if (member.getRole() != CourseRole.TEACHER && !submission.getUser().getId().equals(member.getUser().getId())
+                && !(submission.getGroupId() != null && groups.groupOf(courseId, member.getUser().getId())
+                        .map(group -> group.id().equals(submission.getGroupId())).orElse(false))) throw missing();
         return new Download(submission.getFilename(), storage.get(submission.getObjectKey()));
     }
 
     private AssignmentResponse response(AssignmentDefinition assignment, CourseEnrollment member) {
         boolean teacher = member.getRole() == CourseRole.TEACHER;
+        Long courseId = member.getCourse().getId();
+        var group = !teacher && assignment.isGroupWork() ? groups.groupOf(courseId, member.getUser().getId()).orElse(null) : null;
         var history = teacher ? submissions.findByAssignmentIdOrderBySubmittedAtDescIdDesc(assignment.getId())
+                : group != null ? submissions.findByAssignmentIdAndGroupIdOrderByVersionDesc(assignment.getId(), group.id())
                 : submissions.findByAssignmentIdAndUserIdOrderByVersionDesc(assignment.getId(), member.getUser().getId());
+        var names = teacher && assignment.isGroupWork() ? groups.groupNames(courseId) : java.util.Map.<Long, String>of();
         return new AssignmentResponse(ContentResponse.from(assignment.getContent()), assignment.getDeadline(), assignment.isAcceptLate(),
-                history.stream().map(submission -> SubmissionResponse.from(submission, teacher)).toList());
+                assignment.isGroupWork(), assignment.getStarterRepoUrl(), group == null ? null : group.name(),
+                history.stream().map(submission -> SubmissionResponse.from(submission, teacher,
+                        submission.getGroupId() == null ? null : names.get(submission.getGroupId()))).toList());
     }
     private AssignmentDefinition requireAssignment(Long courseId, Long moduleId, Long assignmentId) {
         modules.findByIdAndCourseId(moduleId, courseId).orElseThrow(() -> missing());

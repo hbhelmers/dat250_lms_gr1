@@ -34,6 +34,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import no.uib.dat250.LMS.content.*;
 import no.uib.dat250.LMS.course.*;
+import no.uib.dat250.LMS.group.GroupDtos.GroupRequest;
+import no.uib.dat250.LMS.group.GroupService;
 import no.uib.dat250.LMS.storage.*;
 import no.uib.dat250.LMS.user.*;
 import static org.assertj.core.api.Assertions.*;
@@ -76,6 +78,8 @@ class AssignmentTests {
     @Autowired AssignmentSubmissionRepository submissions;
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectCleanup cleanup;
+    @Autowired GroupService groupService;
+    @Autowired org.springframework.security.crypto.password.PasswordEncoder passwords;
     @MockitoSpyBean S3FileStorage storage;
     long courseId, moduleId;
 
@@ -294,6 +298,40 @@ class AssignmentTests {
                     .containsExactlyInAnyOrder(1, 2);
         }
     }
+    @Test void groupSubmissionAndGradeAreSharedByAllMembers() throws Exception {
+        long id = assignments.create(courseId, moduleId, new AssignmentRequest("Gruppeoppgave", "Lag noe", true, null, null, null, false,
+                true, "https://git.app.uib.no/dat250/starter.git"), TEACHER).content().id();
+        assertThatThrownBy(() -> submit(id, STUDENT, UUID.randomUUID(), pdf())).isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("gruppe");
+        var overview = groupService.create(courseId, new GroupRequest("Gruppe 1", 4, true), TEACHER);
+        long groupId = overview.groups().getFirst().id();
+        groupService.joinOpenGroup(courseId, groupId, STUDENT);
+        groupService.joinOpenGroup(courseId, groupId, OTHER);
+
+        var first = submit(id, STUDENT, UUID.randomUUID(), pdf());
+        var second = submit(id, OTHER, UUID.randomUUID(), new MockMultipartFile("file", "kode.zip", "application/zip", zip("Main.java")));
+        assertThat(second.version()).isEqualTo(2);
+        assignments.assess(courseId, moduleId, id, second.id(), new GradeRequest(AssignmentGrade.B, "Bra jobba", true), TEACHER);
+
+        var seenByOther = assignments.read(courseId, moduleId, id, STUDENT);
+        assertThat(seenByOther.groupName()).isEqualTo("Gruppe 1");
+        assertThat(seenByOther.starterRepoUrl()).isEqualTo("https://git.app.uib.no/dat250/starter.git");
+        assertThat(seenByOther.submissions()).extracting(SubmissionResponse::id).containsExactly(second.id(), first.id());
+        assertThat(seenByOther.submissions().getFirst().grade()).isEqualTo(AssignmentGrade.B);
+        mvc.perform(get(filePath(id, second.id())).with(user(STUDENT))).andExpect(status().isOk());
+        assertThat(assignments.read(courseId, moduleId, id, TEACHER).submissions().getFirst().groupName()).isEqualTo("Gruppe 1");
+    }
+
+    @Test void apiClientsUsingBasicAuthDoNotNeedCsrfToken() throws Exception {
+        jdbc.update("update users set password_hash = ? where email = ?", passwords.encode("api-secret-1"), TEACHER);
+        // No .with(csrf()): a third-party client authenticating per request should not need a CSRF token.
+        mvc.perform(post(base()).with(httpBasic(TEACHER, "api-secret-1")).contentType(MediaType.APPLICATION_JSON).content(BODY))
+                .andExpect(status().isCreated());
+        // Cookie/session-based requests without a token are still rejected.
+        mvc.perform(post(base()).with(user(TEACHER)).contentType(MediaType.APPLICATION_JSON).content(BODY))
+                .andExpect(status().isForbidden());
+    }
+
     private long create(Instant deadline, boolean acceptLate) {
         return assignments.create(courseId, moduleId, new AssignmentRequest("Oppgave", "Forklar modellen", true, null, null, deadline, acceptLate), TEACHER).content().id();
     }

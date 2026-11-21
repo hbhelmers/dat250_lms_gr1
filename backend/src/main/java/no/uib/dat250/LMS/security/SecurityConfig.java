@@ -50,7 +50,10 @@ public class SecurityConfig {
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .requestCache(cache -> cache.disable())
-                .csrf(Customizer.withDefaults())
+                .csrf(csrf -> csrf
+                        // API clients authenticating per request (HTTP Basic) are not exposed to CSRF,
+                        // since browsers never attach the Authorization header automatically.
+                        .ignoringRequestMatchers(request -> request.getHeader("Authorization") != null))
                 .formLogin(login -> login.loginProcessingUrl("/api/login")
                         .successHandler((request, response, authentication) -> response.setStatus(204))
                         .failureHandler((request, response, exception) -> response.setStatus(401))

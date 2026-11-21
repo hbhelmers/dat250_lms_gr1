@@ -11,6 +11,8 @@ public class AssignmentSubmission {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "assignment_id") private AssignmentDefinition assignment;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "user_id") private LmsUser user;
     @Column(nullable = false) private int version;
+    /** Set when handed in on behalf of a group; the submission and its grade then belong to all members. */
+    @Column(name = "group_id") private Long groupId;
     @Column(nullable = false) private UUID submissionId;
     @Column(nullable = false) private Instant submittedAt;
     @Column(nullable = false) private boolean late;
@@ -26,8 +28,8 @@ public class AssignmentSubmission {
 
     protected AssignmentSubmission() {}
     public AssignmentSubmission(AssignmentDefinition assignment, LmsUser user, int version, UUID submissionId,
-            Instant submittedAt, boolean late, String objectKey, SubmissionFile file) {
-        this.assignment = assignment; this.user = user; this.version = version; this.submissionId = submissionId;
+            Long groupId, Instant submittedAt, boolean late, String objectKey, SubmissionFile file) {
+        this.assignment = assignment; this.user = user; this.version = version; this.groupId = groupId; this.submissionId = submissionId;
         this.submittedAt = submittedAt; this.late = late; this.objectKey = objectKey;
         filename = file.filename(); mediaType = file.mediaType(); fileSize = file.bytes().length; sha256 = file.sha256();
     }
@@ -37,6 +39,7 @@ public class AssignmentSubmission {
     public Long getId() { return id; }
     public LmsUser getUser() { return user; }
     public int getVersion() { return version; }
+    public Long getGroupId() { return groupId; }
     public Instant getSubmittedAt() { return submittedAt; }
     public boolean isLate() { return late; }
     public String getObjectKey() { return objectKey; }
